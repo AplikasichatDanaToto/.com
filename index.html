@@ -9,219 +9,232 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
   * { font-family: 'Inter', sans-serif; }
-  body { background: #1a1a1a; color: #e4e4e7; margin: 0; overflow: hidden; }
+  body { background: #0f0f10; color: #e4e4e7; margin: 0; overflow: hidden; }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
   
-  .input-style { background: #27272a; border: 1px solid #3f3f46; color: #fff; transition: all 0.2s; }
-  .input-style:focus { border-color: #22c55e; outline: none; box-shadow: 0 0 0 2px rgba(34,197,94,0.2); }
+  .glass { background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(63, 63, 70, 0.5); }
+  .input-style { background: #18181b; border: 1px solid #27272a; color: #fff; transition: all 0.2s; }
+  .input-style:focus { border-color: #22c55e; outline: none; box-shadow: 0 0 0 3px rgba(34,197,94,0.15); }
   
-  .group-item { transition: all 0.15s; border-left: 3px solid transparent; }
+  .group-item { transition: all 0.2s; border-left: 3px solid transparent; }
   .group-item:hover { background: #27272a; }
-  .group-item.active { background: #27272a; border-left-color: #22c55e; }
+  .group-item.active { background: linear-gradient(90deg, rgba(34,197,94,0.1) 0%, transparent 100%); border-left-color: #22c55e; }
   
-  @keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-  .msg-in { animation: msgIn 0.2s ease-out; }
+  @keyframes msgIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .msg-in { animation: msgIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
   
-  .modal-bg { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
-  .btn-primary { background: #22c55e; color: #000; font-weight: 600; transition: all 0.2s; }
-  .btn-primary:hover { background: #16a34a; }
-  .btn-secondary { background: #3f3f46; color: #fff; transition: all 0.2s; }
-  .btn-secondary:hover { background: #52525b; }
+  .modal-bg { background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); }
+  .btn-primary { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #000; font-weight: 600; transition: all 0.2s; box-shadow: 0 4px 15px rgba(34,197,94,0.2); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(34,197,94,0.3); }
+  .btn-primary:disabled { background: #27272a; color: #52525b; box-shadow: none; transform: none; }
+  .btn-secondary { background: #27272a; color: #fff; transition: all 0.2s; }
+  .btn-secondary:hover { background: #3f3f46; }
 
   .msg-group { position: relative; }
   .reaction-picker { 
-    position: absolute; top: -15px; right: 10px; background: #18181b; border: 1px solid #52525b; 
+    position: absolute; bottom: -15px; background: #18181b; border: 1px solid #52525b; 
     border-radius: 20px; padding: 4px 6px; display: flex; gap: 4px; z-index: 10; 
-    opacity: 0; pointer-events: none; transition: opacity 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
   }
   .msg-group:hover .reaction-picker { opacity: 1; pointer-events: auto; }
   .reaction-picker button { font-size: 18px; padding: 2px 4px; border-radius: 50%; transition: transform 0.1s; background: transparent; border: none; cursor: pointer; }
   .reaction-picker button:hover { transform: scale(1.3); background: #3f3f46; }
   
   .reaction-pill {
-    background: #3f3f46; border: 1px solid #52525b; font-size: 12px; padding: 4px 10px; 
-    border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; margin-top: 4px; color: #fff;
+    background: #18181b; border: 1px solid #3f3f46; font-size: 12px; padding: 2px 8px; 
+    border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; margin-top: 4px; color: #a1a1aa;
   }
   .reaction-pill:hover { border-color: #fff; }
   .reaction-pill.active { background: #22c55e; border-color: #22c55e; color: #000; font-weight: bold; }
 
-  .chat-img { max-width: 250px; max-height: 250px; border-radius: 8px; cursor: pointer; }
+  .chat-img { max-width: 220px; max-height: 220px; border-radius: 12px; cursor: pointer; transition: transform 0.2s; }
+  .chat-img:hover { transform: scale(1.02); }
   .highlight { background: rgba(251,191,36,0.3); color: #fbbf24; padding: 1px 3px; border-radius: 3px; }
+  
+  .login-bg {
+    background: radial-gradient(circle at 50% 50%, rgba(34,197,94,0.1) 0%, transparent 60%),
+                radial-gradient(circle at 80% 20%, rgba(59,130,246,0.1) 0%, transparent 50%),
+                #0f0f10;
+  }
 </style>
 </head>
 <body class="h-screen flex flex-col">
 
-  <div id="loginView" class="h-screen flex items-center justify-center relative">
-    <div class="absolute inset-0 opacity-5" style="background-image: radial-gradient(#888 1px, transparent 1px); background-size: 20px 20px;"></div>
+  <div id="loginView" class="h-screen flex items-center justify-center relative login-bg">
+    <div class="absolute inset-0 opacity-5" style="background-image: radial-gradient(#888 1px, transparent 1px); background-size: 24px 24px;"></div>
     <div class="relative w-full max-w-md mx-4">
-      <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-green-500 mb-4 shadow-lg shadow-green-500/20">
-          <i class="fas fa-comments text-3xl text-black"></i>
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-green-400 to-green-600 mb-4 shadow-xl shadow-green-500/30">
+          <i class="fas fa-comments text-4xl text-black"></i>
         </div>
-        <h1 class="text-3xl font-bold tracking-tight">NexusChat</h1>
+        <h1 class="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">NexusChat</h1>
+        <p class="text-gray-500 text-sm mt-2">Enterprise Communication Platform</p>
       </div>
-      <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-2xl p-8 shadow-2xl">
+      <div class="glass rounded-2xl p-8 shadow-2xl">
         <form id="loginForm" class="space-y-4">
-          <input type="text" id="loginUsername" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Username" required>
-          <input type="password" id="loginPassword" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Password" required>
+          <div>
+            <label class="text-xs text-gray-400 ml-1 mb-1 block">Username</label>
+            <input type="text" id="loginUsername" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Masukkan username" required>
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 ml-1 mb-1 block">Password</label>
+            <input type="password" id="loginPassword" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Masukkan password" required>
+          </div>
           <div id="loginError" class="hidden text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-2">
             <i class="fas fa-exclamation-circle"></i><span id="loginErrorMsg">Password salah!</span>
           </div>
-          <button type="submit" class="btn-primary w-full py-3 rounded-lg flex items-center justify-center gap-2"><i class="fas fa-sign-in-alt"></i> Masuk</button>
+          <button type="submit" id="loginBtn" class="btn-primary w-full py-3 rounded-lg flex items-center justify-center gap-2"><i class="fas fa-sign-in-alt"></i> Masuk</button>
         </form>
-        <div class="mt-4 text-xs text-gray-400 text-center border-t border-[#3f3f46] pt-4">
-          <i class="fas fa-network-wired mr-1"></i> IP Anda: <span id="ipDisplay" class="text-green-400 font-mono font-bold">Memuat...</span>
+        <div class="mt-6 text-xs text-gray-500 text-center border-t border-[#27272a] pt-4 flex items-center justify-center gap-2">
+          <i class="fas fa-shield-alt text-green-500"></i> IP Anda: <span id="ipDisplay" class="text-green-400 font-mono font-bold">Memuat...</span>
         </div>
       </div>
     </div>
   </div>
 
   <div id="dashboardView" class="hidden h-screen flex flex-col">
-    <header class="bg-[#1f1f23] border-b border-[#3f3f46] px-4 py-2 flex items-center justify-between flex-shrink-0 z-20">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center"><i class="fas fa-comments text-black text-sm"></i></div>
-        <span class="font-bold text-sm">NexusChat</span>
+    <header class="glass border-b border-[#27272a] px-4 py-2.5 flex items-center justify-between flex-shrink-0 z-20">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shadow-lg shadow-green-500/20"><i class="fas fa-comments text-black text-sm"></i></div>
+        <span class="font-bold text-sm tracking-wide hidden md:block">NexusChat</span>
       </div>
-      <div class="flex-1 max-w-xs mx-4">
+      <div class="flex-1 max-w-xs mx-4 hidden md:block">
         <div class="relative">
-          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
-          <input type="text" id="globalSearch" class="input-style w-full pl-8 pr-4 py-1.5 rounded-md text-xs" placeholder="Cari chat... (Ctrl+F)">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs"></i>
+          <input type="text" id="globalSearch" class="input-style w-full pl-8 pr-4 py-2 rounded-lg text-xs" placeholder="Cari chat... (Ctrl+F)">
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <div class="text-right">
+        <div class="text-right hidden sm:block">
           <div class="text-xs font-bold" id="userName">-</div>
-          <div class="text-[10px] text-gray-500" id="userRole">-</div>
+          <div class="text-[10px] text-green-500 font-medium" id="userRole">-</div>
         </div>
-        <img id="userAvatarHeader" class="w-9 h-9 rounded-full cursor-pointer object-cover" src="https://ui-avatars.com/api/?background=27272a&color=fff&name=U" onclick="openProfileModal()">
-        <button id="logoutBtn" class="w-8 h-8 rounded-md hover:bg-red-500/20 text-gray-400 hover:text-red-400 flex items-center justify-center"><i class="fas fa-sign-out-alt text-xs"></i></button>
+        <img id="userAvatarHeader" class="w-10 h-10 rounded-full cursor-pointer object-cover ring-2 ring-[#27272a] hover:ring-green-500 transition-all" src="https://ui-avatars.com/api/?background=27272a&color=fff&name=U" onclick="openProfileModal()">
+        <button id="logoutBtn" class="w-9 h-9 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 flex items-center justify-center transition-all"><i class="fas fa-sign-out-alt text-sm"></i></button>
       </div>
     </header>
 
     <div class="flex-1 flex overflow-hidden">
-      <aside class="w-64 bg-[#1f1f23] border-r border-[#3f3f46] flex flex-col flex-shrink-0">
-        <div class="p-3 border-b border-[#3f3f46] flex items-center justify-between">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Groups</span>
-          <button id="adminAddGroupBtn" class="hidden text-green-400 hover:text-white text-xs"><i class="fas fa-plus"></i></button>
+      <aside class="w-72 glass border-r border-[#27272a] flex flex-col flex-shrink-0">
+        <div class="p-4 border-b border-[#27272a] flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-widest text-gray-500">Groups</span>
+          <button id="adminAddGroupBtn" class="hidden w-7 h-7 rounded-md bg-green-500/10 text-green-400 hover:bg-green-500/20 text-xs items-center justify-center"><i class="fas fa-plus"></i></button>
         </div>
         <div id="groupList" class="flex-1 overflow-y-auto py-2"></div>
-        <div id="adminPanel" class="hidden p-3 border-t border-[#3f3f46]">
-          <button id="adminManageUsersBtn" class="w-full text-xs text-left text-gray-400 hover:text-white bg-[#27272a] hover:bg-[#3f3f46] py-2 px-3 rounded-md flex items-center gap-2"><i class="fas fa-users-cog"></i> Kelola User</button>
+        <div id="adminPanel" class="hidden p-3 border-t border-[#27272a]">
+          <button id="adminManageUsersBtn" class="w-full text-xs text-left text-gray-400 hover:text-white bg-[#18181b] hover:bg-[#27272a] py-2.5 px-3 rounded-lg flex items-center gap-2 transition-all"><i class="fas fa-users-cog text-green-400"></i> Kelola User & Group</button>
         </div>
       </aside>
 
       <main class="flex-1 flex flex-col min-w-0 relative">
-        <div id="chatHeader" class="bg-[#1f1f23] border-b border-[#3f3f46] px-6 py-3 flex items-center justify-between flex-shrink-0"></div>
-        <div id="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4 bg-[#18181b]"></div>
-        <div class="bg-[#1f1f23] border-t border-[#3f3f46] p-4 flex-shrink-0">
-          <form id="messageForm" class="flex items-center gap-2">
-            <button type="button" id="uploadImgBtn" class="w-10 h-10 rounded-lg bg-[#27272a] hover:bg-[#3f3f46] text-gray-400 hover:text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-image"></i></button>
+        <div id="chatHeader" class="glass border-b border-[#27272a] px-6 py-3 flex items-center justify-between flex-shrink-0"></div>
+        <div id="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4 bg-[#0f0f10]"></div>
+        <div class="glass border-t border-[#27272a] p-4 flex-shrink-0">
+          <form id="messageForm" class="flex items-center gap-3">
+            <button type="button" id="uploadImgBtn" class="w-11 h-11 rounded-xl bg-[#18181b] hover:bg-[#27272a] text-gray-500 hover:text-green-400 flex items-center justify-center flex-shrink-0 transition-all" disabled><i class="fas fa-image"></i></button>
             <input type="file" id="imageInput" class="hidden" accept="image/*">
-            <input type="text" id="messageInput" class="input-style flex-1 px-4 py-2.5 rounded-lg text-sm" placeholder="Ketik pesan..." disabled>
-            <button type="submit" id="sendBtn" class="btn-primary px-4 py-2.5 rounded-lg text-sm flex-shrink-0" disabled><i class="fas fa-paper-plane"></i></button>
+            <input type="text" id="messageInput" class="input-style flex-1 px-4 py-3 rounded-xl text-sm" placeholder="Ketik pesan..." disabled>
+            <button type="submit" id="sendBtn" class="btn-primary w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" disabled><i class="fas fa-paper-plane"></i></button>
           </form>
         </div>
-        <div id="notifBar" class="absolute bottom-20 left-1/2 -translate-x-1/2 hidden bg-[#27272a] border border-green-500 rounded-full shadow-2xl px-5 py-2.5 flex items-center gap-3 cursor-pointer z-10" onclick="handleNotifClick()">
-          <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div><span id="notifText" class="text-xs font-medium text-white"></span><i class="fas fa-chevron-right text-xs text-gray-400"></i>
+        <div id="notifBar" class="absolute bottom-24 left-1/2 -translate-x-1/2 hidden bg-[#18181b] border border-green-500/50 rounded-full shadow-2xl shadow-green-500/10 px-5 py-3 flex items-center gap-3 cursor-pointer z-10" onclick="handleNotifClick()">
+          <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div><span id="notifText" class="text-xs font-medium text-white"></span><i class="fas fa-chevron-right text-xs text-gray-500"></i>
         </div>
       </main>
     </div>
   </div>
 
   <div id="profileModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
-    <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-xl w-full max-w-md p-6 text-center">
-      <h3 class="font-bold text-lg mb-4">Foto Profil</h3>
-      <img id="profilePreview" class="w-24 h-24 rounded-full mx-auto mb-4 object-cover" src="">
+    <div class="glass rounded-2xl w-full max-w-md p-8 text-center">
+      <h3 class="font-bold text-lg mb-6">Ubah Foto Profil</h3>
+      <img id="profilePreview" class="w-32 h-32 rounded-full mx-auto mb-6 object-cover ring-4 ring-[#27272a]" src="">
       <input type="file" id="profileInput" class="hidden" accept="image/*">
-      <button onclick="document.getElementById('profileInput').click()" class="btn-secondary px-4 py-2 rounded-lg text-sm mb-4"><i class="fas fa-upload mr-1"></i> Pilih Foto</button>
-      <div class="flex gap-2">
-        <button onclick="closeModal('profileModal')" class="btn-secondary w-full py-2 rounded-lg text-sm">Batal</button>
-        <button onclick="saveProfilePic()" class="btn-primary w-full py-2 rounded-lg text-sm">Simpan</button>
+      <button onclick="document.getElementById('profileInput').click()" class="btn-secondary px-4 py-2.5 rounded-lg text-sm mb-4 w-full"><i class="fas fa-upload mr-2"></i> Pilih Foto Baru</button>
+      <div class="flex gap-2 mt-4">
+        <button onclick="closeModal('profileModal')" class="btn-secondary w-full py-2.5 rounded-lg text-sm">Batal</button>
+        <button onclick="saveProfilePic()" class="btn-primary w-full py-2.5 rounded-lg text-sm">Simpan</button>
       </div>
     </div>
   </div>
 
   <div id="manageUsersModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
-    <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
-      <div class="p-4 border-b border-[#3f3f46] flex items-center justify-between">
-        <h3 class="font-bold">Kelola User & Group</h3>
-        <button onclick="closeModal('manageUsersModal')" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+    <div class="glass rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+      <div class="p-5 border-b border-[#27272a] flex items-center justify-between">
+        <h3 class="font-bold text-lg">Kelola User & Group</h3>
+        <button onclick="closeModal('manageUsersModal')" class="text-gray-500 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#27272a]"><i class="fas fa-times"></i></button>
       </div>
-      <div class="p-4 overflow-y-auto">
-        <div class="grid grid-cols-2 gap-4">
-          <div class="bg-[#18181b] p-4 rounded-lg border border-[#3f3f46]">
-            <h4 class="text-xs font-bold uppercase mb-3 text-gray-400">Daftar User Baru</h4>
+      <div class="p-5 overflow-y-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-[#0f0f10] p-4 rounded-xl border border-[#27272a]">
+            <h4 class="text-xs font-bold uppercase mb-4 text-green-400 flex items-center gap-2"><i class="fas fa-user-plus"></i> Daftar User Baru</h4>
             <div class="space-y-3">
-              <input type="text" id="newUserName" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Nama Lengkap">
-              <input type="text" id="newUserUsername" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Username">
-              <input type="password" id="newUserPassword" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Password">
-              <select id="newUserRole" class="input-style w-full px-3 py-2 rounded text-xs"><option value="member">Member</option><option value="leader">Leader</option></select>
-              <input type="text" id="newUserIp" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="IP (isi 'any' jika bebas)">
-              <button onclick="adminAddUser()" class="btn-primary w-full py-2 rounded text-xs">Tambah User</button>
+              <input type="text" id="newUserName" class="input-style w-full px-3 py-2.5 rounded-lg text-xs" placeholder="Nama Lengkap">
+              <input type="text" id="newUserUsername" class="input-style w-full px-3 py-2.5 rounded-lg text-xs" placeholder="Username">
+              <input type="password" id="newUserPassword" class="input-style w-full px-3 py-2.5 rounded-lg text-xs" placeholder="Password">
+              <select id="newUserRole" class="input-style w-full px-3 py-2.5 rounded-lg text-xs"><option value="member">Member</option><option value="leader">Leader</option></select>
+              <input type="text" id="newUserIp" class="input-style w-full px-3 py-2.5 rounded-lg text-xs" placeholder="IP (isi 'any' jika bebas)" value="any">
+              <button onclick="adminAddUser()" class="btn-primary w-full py-2.5 rounded-lg text-xs">Tambah User</button>
             </div>
           </div>
-          <div class="bg-[#18181b] p-4 rounded-lg border border-[#3f3f46]">
-            <h4 class="text-xs font-bold uppercase mb-3 text-gray-400">Buat Group Baru</h4>
+          <div class="bg-[#0f0f10] p-4 rounded-xl border border-[#27272a]">
+            <h4 class="text-xs font-bold uppercase mb-4 text-green-400 flex items-center gap-2"><i class="fas fa-plus-circle"></i> Buat Group Baru</h4>
             <div class="space-y-3">
-              <input type="text" id="newGroupName" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Nama Group">
-              <textarea id="newGroupDesc" class="input-style w-full px-3 py-2 rounded text-xs" rows="2" placeholder="Deskripsi"></textarea>
-              <select id="newGroupLeader" class="input-style w-full px-3 py-2 rounded text-xs"></select>
-              <button onclick="adminAddGroup()" class="btn-primary w-full py-2 rounded text-xs">Buat Group</button>
+              <input type="text" id="newGroupName" class="input-style w-full px-3 py-2.5 rounded-lg text-xs" placeholder="Nama Group">
+              <textarea id="newGroupDesc" class="input-style w-full px-3 py-2.5 rounded-lg text-xs" rows="2" placeholder="Deskripsi"></textarea>
+              <select id="newGroupLeader" class="input-style w-full px-3 py-2.5 rounded-lg text-xs"></select>
+              <button onclick="adminAddGroup()" class="btn-primary w-full py-2.5 rounded-lg text-xs">Buat Group</button>
             </div>
           </div>
         </div>
-        <div class="mt-6"><h4 class="text-xs font-bold uppercase mb-3 text-gray-400">Daftar User</h4><div id="adminUserList" class="space-y-2 max-h-40 overflow-y-auto"></div></div>
+        <div class="mt-6">
+          <h4 class="text-xs font-bold uppercase mb-3 text-gray-500">Daftar User Terdaftar</h4>
+          <div id="adminUserList" class="space-y-2 max-h-40 overflow-y-auto"></div>
+        </div>
       </div>
     </div>
   </div>
 
   <div id="manageGroupModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
-    <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-xl w-full max-w-lg max-h-[85vh] flex flex-col">
-      <div class="p-4 border-b border-[#3f3f46] flex items-center justify-between">
-        <h3 class="font-bold">Edit Group: <span id="editGroupNameTitle" class="text-green-400"></span></h3>
-        <button onclick="closeModal('manageGroupModal')" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+    <div class="glass rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+      <div class="p-5 border-b border-[#27272a] flex items-center justify-between">
+        <h3 class="font-bold text-lg">Edit Group: <span id="editGroupNameTitle" class="text-green-400"></span></h3>
+        <button onclick="closeModal('manageGroupModal')" class="text-gray-500 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#27272a]"><i class="fas fa-times"></i></button>
       </div>
-      <div class="p-4 overflow-y-auto">
+      <div class="p-5 overflow-y-auto">
         <div class="space-y-3 mb-4">
-          <input type="text" id="editGroupName" class="input-style w-full px-3 py-2 rounded text-sm" placeholder="Nama Group">
-          <textarea id="editGroupDesc" class="input-style w-full px-3 py-2 rounded text-sm" rows="2" placeholder="Deskripsi"></textarea>
+          <input type="text" id="editGroupName" class="input-style w-full px-4 py-2.5 rounded-lg text-sm" placeholder="Nama Group">
+          <textarea id="editGroupDesc" class="input-style w-full px-4 py-2.5 rounded-lg text-sm" rows="2" placeholder="Deskripsi"></textarea>
         </div>
-        <h4 class="text-xs font-bold uppercase mb-2 text-gray-400">Centang User untuk Masuk Group</h4>
-        <div id="groupMembersList" class="space-y-1 max-h-48 overflow-y-auto bg-[#18181b] p-3 rounded-lg border border-[#3f3f46]"></div>
-        <button onclick="saveGroupChanges()" class="btn-primary w-full py-2 rounded-lg mt-6">Simpan Perubahan</button>
+        <h4 class="text-xs font-bold uppercase mb-2 text-gray-500">Centang User untuk Masuk Group</h4>
+        <div id="groupMembersList" class="space-y-1 max-h-48 overflow-y-auto bg-[#0f0f10] p-3 rounded-xl border border-[#27272a]"></div>
+        <button onclick="saveGroupChanges()" class="btn-primary w-full py-2.5 rounded-lg mt-6">Simpan Perubahan</button>
       </div>
     </div>
   </div>
 
-  <div id="imageViewerModal" class="hidden fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-8 cursor-pointer" onclick="closeModal('imageViewerModal')"><img id="imageViewerSrc" class="max-w-full max-h-full object-contain rounded-lg" src=""></div>
+  <div id="imageViewerModal" class="hidden fixed inset-0 bg-black/95 z-[60] flex items-center justify-center p-8 cursor-pointer" onclick="closeModal('imageViewerModal')"><img id="imageViewerSrc" class="max-w-full max-h-full object-contain rounded-lg" src=""></div>
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
 // PASTIKAN ANDA MENGGANTI URL INI DENGAN URL WEB APP ANDA
-const API_URL = 'https://script.google.com/macros/s/AKfycbyAY5tdx5GrjJQICnOKb00K_7pj4UF66Oc_Z9RUK_Bhe7Q24bQFB77YfePFmi-cOXxl/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyWYoe0yIDtM7z1N-S5a1aL0iXBX3i4KqKml7p3nqQphmou_MA8xUNKz60S8t7iwnXK/exec';
 
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
   .then(res => res.json())
-  .then(data => { 
-    currentIP = data.ip; 
-    const ipEl = document.getElementById('ipDisplay');
-    if (ipEl) ipEl.textContent = currentIP; 
-  })
-  .catch(() => { 
-    currentIP = 'Unknown'; 
-    const ipEl = document.getElementById('ipDisplay');
-    if (ipEl) ipEl.textContent = 'Gagal deteksi'; 
-  });
+  .then(data => { currentIP = data.ip; document.getElementById('ipDisplay').textContent = currentIP; })
+  .catch(() => { currentIP = 'Unknown'; document.getElementById('ipDisplay').textContent = 'Gagal deteksi'; });
 
 let usersCache = [];
 let messagesCache = [];
 let groupsCache = [];
 let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 
-// Helper untuk POST request agar tidak kena CORS
+// ANTI LAG: Track pesan terakhir yang dirender
+let lastRenderedMsgId = null;
+
 async function apiPost(payload) {
   try {
     await fetch(API_URL, {
@@ -235,10 +248,10 @@ async function apiPost(payload) {
 function showToast(msg, type='info') {
   const c = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
   const t = document.createElement('div');
-  t.className = `${c} text-white text-xs px-4 py-2 rounded-lg shadow-xl flex items-center gap-2`;
+  t.className = `${c} text-white text-xs px-4 py-3 rounded-lg shadow-2xl flex items-center gap-2 animate-pulse`;
   t.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${msg}`;
   document.getElementById('toastContainer').appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3000);
 }
 
 function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
@@ -255,7 +268,7 @@ function compressImage(file, maxSize, callback) {
       canvas.width = width; canvas.height = height;
       let ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
-      callback(canvas.toDataURL('image/jpeg', 0.7));
+      callback(canvas.toDataURL('image/jpeg', 0.6)); // Kompresi lebih agresif untuk anti-lag
     };
     img.src = e.target.result;
   };
@@ -267,36 +280,39 @@ function viewImage(src) { document.getElementById('imageViewerSrc').src = src; o
 
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...';
+  btn.disabled = true;
+  
   const u = document.getElementById('loginUsername').value.trim();
   const p = document.getElementById('loginPassword').value;
   const errBox = document.getElementById('loginError');
   const errMsg = document.getElementById('loginErrorMsg');
   
-  // Coba ambil data user dari server
   try {
     const res = await fetch(`${API_URL}?action=getUsers`);
     const data = await res.json();
     usersCache = Array.isArray(data) ? data : [];
+    if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
   } catch (err) {
     usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
   }
 
-  // Sistem Fallback agar admin selalu bisa login walau server down
   if (usersCache.length === 0 && u === 'admin' && p === 'admin') {
     usersCache.push({ id: '1', name: 'Administrator', username: 'admin', password: 'admin', ip: 'any', role: 'admin', groupAccess: [], avatar: '', pinnedGroups: [] });
     localStorage.setItem('nc_users', JSON.stringify(usersCache));
   }
   
   const user = usersCache.find(x => x.username === u);
-  if (!user) { errMsg.textContent = 'Username tidak ditemukan. Hubungi Admin.'; errBox.classList.remove('hidden'); return; }
+  if (!user) { errMsg.textContent = 'Username tidak ditemukan. Hubungi Admin.'; errBox.classList.remove('hidden'); btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Masuk'; btn.disabled = false; return; }
   
-  // Cek IP (Jangan langsung tolak jika IP masih Memuat)
-  if (user.ip !== 'any' && user.ip !== currentIP && currentIP !== 'Memuat...' && currentIP !== 'Unknown') { 
-    errMsg.textContent = `Akses ditolak! IP Anda (${currentIP}) tidak terdaftar.`; 
+  if (user.ip && user.ip !== 'any' && user.ip !== currentIP && currentIP !== 'Memuat...' && currentIP !== 'Unknown') { 
+    errMsg.textContent = `Akses ditolak! IP (${currentIP}) tidak terdaftar.`; 
     errBox.classList.remove('hidden'); 
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Masuk'; btn.disabled = false;
     return; 
   }
-  if (user.password !== p) { errMsg.textContent = 'Password salah! Silakan coba lagi.'; errBox.classList.remove('hidden'); return; }
+  if (user.password !== p) { errMsg.textContent = 'Password salah! Silakan coba lagi.'; errBox.classList.remove('hidden'); btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Masuk'; btn.disabled = false; return; }
   
   errBox.classList.add('hidden');
   sessionStorage.setItem('nc_session', user.id);
@@ -320,14 +336,20 @@ async function showDashboard() {
   
   if (user.role === 'admin') {
     document.getElementById('adminAddGroupBtn').classList.remove('hidden');
+    document.getElementById('adminAddGroupBtn').classList.add('flex');
     document.getElementById('adminPanel').classList.remove('hidden');
   }
   
-  // Ambil groups
+  // AMANKAN GROUP: Sinkronisasi Local dengan Server
   try {
     const res = await fetch(`${API_URL}?action=getGroups`);
     const data = await res.json();
-    groupsCache = Array.isArray(data) ? data : JSON.parse(localStorage.getItem('nc_groups') || '[]');
+    if (Array.isArray(data) && data.length > 0) {
+      groupsCache = data;
+      localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
+    } else {
+      groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
+    }
   } catch(e) {
     groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
   }
@@ -375,24 +397,29 @@ function renderGroups() {
     return (bPinned === true) - (aPinned === true);
   });
   
+  if (myGroups.length === 0) {
+    list.innerHTML = `<div class="text-center text-gray-600 text-xs p-4">Anda belum tergabung di group manapun.</div>`;
+    return;
+  }
+
   list.innerHTML = myGroups.map(g => {
     const unread = getUnreadCount(g.id, user.id);
     const isLeader = user.id === g.leaderId || user.role === 'admin';
     const isPinned = user.pinnedGroups && user.pinnedGroups.includes(g.id);
     return `
-      <div class="group-item ${activeGroupId === g.id ? 'active' : ''} px-3 py-2 cursor-pointer flex items-center gap-2" onclick="selectGroup('${g.id}')">
-        <div class="w-8 h-8 rounded-lg bg-[#27272a] flex items-center justify-center flex-shrink-0 text-gray-400">
-           <i class="fas fa-hashtag text-xs"></i>
+      <div class="group-item ${activeGroupId === g.id ? 'active' : ''} px-3 py-3 cursor-pointer flex items-center gap-3" onclick="selectGroup('${g.id}')">
+        <div class="w-10 h-10 rounded-xl bg-[#18181b] flex items-center justify-center flex-shrink-0 text-gray-500 border border-[#27272a]">
+           <i class="fas fa-hashtag text-sm"></i>
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between">
-            <span class="text-sm font-medium text-gray-200 break-words whitespace-normal">${g.name}</span>
-            ${unread > 0 ? `<span class="bg-green-500 text-black font-bold text-[10px] min-w-[16px] h-[16px] rounded-full flex items-center justify-center px-1 ml-2 flex-shrink-0">${unread}</span>` : ''}
+            <span class="text-sm font-semibold text-gray-200 break-words whitespace-normal">${g.name}</span>
+            ${unread > 0 ? `<span class="bg-green-500 text-black font-bold text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 ml-2 flex-shrink-0">${unread}</span>` : ''}
           </div>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
-          <i class="fas fa-thumbtack text-xs ${isPinned ? 'text-green-400' : 'text-gray-600 hover:text-white'}" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan"></i>
-          ${isLeader ? `<i class="fas fa-cog text-gray-500 hover:text-white text-xs" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')" title="Kelola"></i>` : ''}
+          <i class="fas fa-thumbtack text-xs ${isPinned ? 'text-green-400' : 'text-gray-700 hover:text-white'}" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan"></i>
+          ${isLeader ? `<i class="fas fa-cog text-gray-700 hover:text-white text-xs" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')" title="Kelola"></i>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -401,11 +428,8 @@ function renderGroups() {
 async function togglePinGroup(gid) {
   const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
   if (!user.pinnedGroups) user.pinnedGroups = [];
-  if (user.pinnedGroups.includes(gid)) {
-    user.pinnedGroups = user.pinnedGroups.filter(id => id !== gid);
-  } else {
-    user.pinnedGroups.push(gid);
-  }
+  if (user.pinnedGroups.includes(gid)) user.pinnedGroups = user.pinnedGroups.filter(id => id !== gid);
+  else user.pinnedGroups.push(gid);
   localStorage.setItem('nc_users', JSON.stringify(usersCache));
   renderGroups();
   apiPost({ action: 'updateUserAccess', id: user.id, groupAccess: user.groupAccess, avatar: user.avatar, pinnedGroups: user.pinnedGroups });
@@ -425,6 +449,7 @@ function selectGroup(id) {
   document.getElementById('messageInput').disabled = false;
   document.getElementById('sendBtn').disabled = false;
   document.getElementById('uploadImgBtn').disabled = false;
+  lastRenderedMsgId = null; // Reset render agar render ulang penuh saat ganti grup
   renderGroups();
   renderMessages();
   updateChatHeader();
@@ -432,17 +457,18 @@ function selectGroup(id) {
 
 function updateChatHeader() {
   const g = groupsCache.find(x => x.id === activeGroupId);
+  if(!g) return;
   const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
   const isLeader = user.id === g.leaderId || user.role === 'admin';
   document.getElementById('chatHeader').innerHTML = `
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-[#27272a] flex items-center justify-center text-gray-400"><i class="fas fa-hashtag"></i></div>
+      <div class="w-10 h-10 rounded-xl bg-[#18181b] flex items-center justify-center text-gray-500 border border-[#27272a]"><i class="fas fa-hashtag"></i></div>
       <div>
         <h2 class="font-bold text-sm">${g.name}</h2>
-        <p class="text-xs text-gray-500">${g.desc}</p>
+        <p class="text-xs text-gray-500">${g.desc || 'Tidak ada deskripsi'}</p>
       </div>
     </div>
-    ${isLeader ? `<button onclick="openManageGroupModal('${g.id}')" class="btn-secondary px-3 py-1.5 rounded-md text-xs"><i class="fas fa-cog mr-1"></i> Kelola</button>` : ''}
+    ${isLeader ? `<button onclick="openManageGroupModal('${g.id}')" class="btn-secondary px-3 py-2 rounded-lg text-xs"><i class="fas fa-cog mr-1"></i> Kelola</button>` : ''}
   `;
 }
 
@@ -450,7 +476,12 @@ async function fetchMessages() {
   try {
     const res = await fetch(`${API_URL}?action=getMessages`);
     const data = await res.json();
-    messagesCache = Array.isArray(data) ? data : JSON.parse(localStorage.getItem('nc_messages') || '[]');
+    if (Array.isArray(data)) {
+      messagesCache = data;
+      localStorage.setItem('nc_messages', JSON.stringify(data));
+    } else {
+      messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
+    }
   } catch(e) {
     messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
   }
@@ -472,13 +503,14 @@ function renderMessages(searchTerm = '') {
   const emojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
   
   if (msgs.length === 0) {
-    html = `<div class="h-full flex flex-col items-center justify-center text-gray-600"><i class="fas fa-comment-slash text-4xl mb-2"></i><p class="text-sm">Belum ada pesan</p></div>`;
+    html = `<div class="h-full flex flex-col items-center justify-center text-gray-700"><i class="fas fa-comment-slash text-5xl mb-4"></i><p class="text-sm font-medium">Belum ada pesan. Mulai ngobrol sekarang!</p></div>`;
   } else {
-    // ANTI-LAG: Hanya render 200 pesan terakhir
-    msgs.slice(-200).forEach(msg => {
+    // ANTI-LAG: Batasi render 100 pesan terakhir
+    const renderMsgs = msgs.slice(-100);
+    renderMsgs.forEach(msg => {
       const dateStr = new Date(parseInt(msg.timestamp)).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
       if (dateStr !== lastDate) {
-        html += `<div class="flex items-center gap-4 my-4"><div class="flex-1 h-px bg-[#3f3f46]"></div><span class="text-[10px] text-gray-500 uppercase">${dateStr}</span><div class="flex-1 h-px bg-[#3f3f46]"></div></div>`;
+        html += `<div class="flex items-center gap-4 my-6"><div class="flex-1 h-px bg-[#27272a]"></div><span class="text-[10px] text-gray-600 uppercase tracking-wider">${dateStr}</span><div class="flex-1 h-px bg-[#27272a]"></div></div>`;
         lastDate = dateStr;
       }
       const isSelf = msg.userId == user.id;
@@ -486,7 +518,7 @@ function renderMessages(searchTerm = '') {
       
       let reactionsHtml = '';
       if (msg.reactions && Object.keys(msg.reactions).length > 0) {
-        reactionsHtml = '<div class="flex gap-1 mt-1 flex-wrap">';
+        reactionsHtml = '<div class="flex gap-1 mt-2 flex-wrap">';
         for (const [emoji, uids] of Object.entries(msg.reactions)) {
           const isActive = uids.includes(parseInt(user.id));
           reactionsHtml += `<div class="reaction-pill ${isActive ? 'active' : ''}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} <span>${uids.length}</span></div>`;
@@ -497,17 +529,17 @@ function renderMessages(searchTerm = '') {
       const pickerPos = isSelf ? 'right-0' : 'left-0';
       
       html += `
-        <div class="msg-group msg-in flex gap-3 mb-4 ${isSelf ? 'flex-row-reverse' : ''}">
-          <img src="${avatar}" class="w-9 h-9 rounded-full flex-shrink-0 object-cover">
-          <div class="max-w-[60%]">
-            <div class="flex items-center gap-2 ${isSelf ? 'justify-end' : ''}">
+        <div class="msg-group msg-in flex gap-3 mb-6 ${isSelf ? 'flex-row-reverse' : ''}">
+          <img src="${avatar}" class="w-9 h-9 rounded-full flex-shrink-0 object-cover mt-1">
+          <div class="max-w-[70%]">
+            <div class="flex items-center gap-2 ${isSelf ? 'justify-end' : ''} mb-1">
               <span class="text-xs font-bold ${isSelf ? 'text-green-400' : 'text-white'}">${msg.name}</span>
-              <span class="text-[10px] text-gray-500">${formatTime(msg.timestamp)}</span>
+              <span class="text-[10px] text-gray-600">${formatTime(msg.timestamp)}</span>
             </div>
-            <div class="relative mt-1">
+            <div class="relative">
               ${msg.type === 'image' ? 
                 `<img src="${msg.content}" class="chat-img" onclick="viewImage('${msg.content}')">` :
-                `<div class="bg-[#27272a] px-3 py-2 rounded-lg text-sm inline-block break-words" style="border-top-left-radius: 0;">${escapeHtml(msg.content)}</div>`
+                `<div class="bg-[#18181b] px-4 py-2.5 rounded-2xl text-sm inline-block break-words border border-[#27272a]" style="border-top-left-radius: 2px;">${escapeHtml(msg.content)}</div>`
               }
               <div class="reaction-picker ${pickerPos}">
                 ${emojis.map(e => `<button onclick="toggleReaction('${msg.id}', '${e}')">${e}</button>`).join('')}
@@ -520,6 +552,7 @@ function renderMessages(searchTerm = '') {
   }
   container.innerHTML = html;
   if (!searchTerm) container.scrollTop = container.scrollHeight;
+  
   if (searchTerm) {
     const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     container.querySelectorAll('.break-words').forEach(el => {
@@ -561,7 +594,8 @@ document.getElementById('uploadImgBtn').addEventListener('click', () => document
 document.getElementById('imageInput').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file || !activeGroupId) return;
-  compressImage(file, 800, (src) => {
+  // ANTI-LAG: Perkecil ukuran file gambar maksimal 600px
+  compressImage(file, 600, (src) => {
     const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
     const msg = { id: 'm_' + Date.now(), groupId: activeGroupId, userId: user.id, name: user.name, avatar: user.avatar, content: src, timestamp: Date.now(), type: 'image', reactions: {} };
     messagesCache.push(msg);
@@ -580,13 +614,17 @@ document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); document.getElementById('globalSearch').focus(); }
 });
 
+let pollingInterval = null;
 function startNotifCheck() {
-  setInterval(async () => {
+  if (pollingInterval) clearInterval(pollingInterval);
+  let prevMsgCount = messagesCache.length;
+  
+  pollingInterval = setInterval(async () => {
     await fetchMessages();
     const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
     if(!user) return;
-    let latestMsg = null, latestGroupId = null;
     
+    let latestMsg = null, latestGroupId = null;
     groupsCache.forEach(g => {
       if (g.id === activeGroupId) return;
       const msgs = messagesCache.filter(m => m.groupId === g.id);
@@ -603,12 +641,17 @@ function startNotifCheck() {
       const group = groupsCache.find(g => g.id === latestGroupId);
       document.getElementById('notifText').textContent = `Pesan baru di ${group.name} dari ${latestMsg.name}`;
       notifBar.classList.remove('hidden');
+      notifBar.classList.add('flex');
       notifBar.dataset.targetGroup = latestGroupId;
-    } else { notifBar.classList.add('hidden'); }
+    } else { notifBar.classList.add('hidden'); notifBar.classList.remove('flex'); }
     
     renderGroups();
-    if (activeGroupId) renderMessages();
-  }, 3000);
+    // ANTI-LAG: Hanya render ulang chat jika ada pesan baru
+    if (activeGroupId && messagesCache.length !== prevMsgCount) {
+      prevMsgCount = messagesCache.length;
+      renderMessages();
+    }
+  }, 4000); // Cek setiap 4 detik
 }
 
 function handleNotifClick() {
@@ -633,14 +676,14 @@ async function adminAddGroup() {
   
   const newG = { id: 'g_' + Date.now(), name: name.toUpperCase(), desc: desc || '-', leaderId: leaderId };
   groupsCache.push(newG);
-  localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
+  localStorage.setItem('nc_groups', JSON.stringify(groupsCache)); // Amankan ke local
   
   const leader = usersCache.find(u => u.id == leaderId);
   if (leader && !leader.groupAccess.includes(newG.id)) leader.groupAccess.push(newG.id);
   localStorage.setItem('nc_users', JSON.stringify(usersCache));
   
   apiPost({ action: 'addGroup', ...newG });
-  apiPost({ action: 'updateUserAccess', id: leader.id, groupAccess: leader.groupAccess, avatar: leader.avatar, pinnedGroups: leader.pinnedGroups || [] });
+  if (leader) apiPost({ action: 'updateUserAccess', id: leader.id, groupAccess: leader.groupAccess, avatar: leader.avatar, pinnedGroups: leader.pinnedGroups || [] });
   
   document.getElementById('newGroupName').value = '';
   document.getElementById('newGroupDesc').value = '';
@@ -653,10 +696,10 @@ async function adminAddUser() {
   const username = document.getElementById('newUserUsername').value.trim();
   const password = document.getElementById('newUserPassword').value.trim();
   const role = document.getElementById('newUserRole').value;
-  const ip = document.getElementById('newUserIp').value.trim();
-  if (!name || !username || !password || !ip) return showToast('Semua field wajib diisi', 'error');
+  const ip = document.getElementById('newUserIp').value.trim() || 'any';
+  if (!name || !username || !password) return showToast('Nama, username, password wajib diisi', 'error');
   
-  const newUser = { id: Date.now().toString(), name, username, password, ip, role, groupAccess: ['g1'], avatar: '', pinnedGroups: [] };
+  const newUser = { id: Date.now().toString(), name, username, password, ip, role, groupAccess: [], avatar: '', pinnedGroups: [] };
   usersCache.push(newUser);
   localStorage.setItem('nc_users', JSON.stringify(usersCache));
   
@@ -665,7 +708,6 @@ async function adminAddUser() {
   document.getElementById('newUserName').value = '';
   document.getElementById('newUserUsername').value = '';
   document.getElementById('newUserPassword').value = '';
-  document.getElementById('newUserIp').value = '';
   renderAdminUserList();
   populateLeaderSelect();
   showToast('User ditambahkan', 'success');
@@ -673,13 +715,13 @@ async function adminAddUser() {
 
 function renderAdminUserList() {
   document.getElementById('adminUserList').innerHTML = usersCache.filter(u => u.role !== 'admin').map(u => `
-    <div class="bg-[#18181b] p-3 rounded border border-[#3f3f46] flex items-center justify-between">
+    <div class="bg-[#0f0f10] p-3 rounded-lg border border-[#27272a] flex items-center justify-between">
       <div>
         <div class="text-sm font-medium">${u.name}</div>
-        <div class="text-[10px] text-gray-500">IP: ${u.ip} | Role: <span class="text-green-400 font-bold">${u.role}</span></div>
+        <div class="text-[10px] text-gray-500">IP: ${u.ip} | Role: <span class="text-green-400 font-bold uppercase">${u.role}</span></div>
       </div>
     </div>
-  `).join('') || `<p class="text-xs text-gray-500 text-center py-4">Belum ada user</p>`;
+  `).join('') || `<p class="text-xs text-gray-600 text-center py-4">Belum ada user</p>`;
 }
 
 let currentEditGroupId = null;
@@ -699,13 +741,13 @@ function renderGroupMembersChecklist(groupId) {
     const hasAccess = u.groupAccess.includes(groupId);
     const isLeader = u.id == g.leaderId;
     return `
-      <label class="flex items-center gap-2 p-2 hover:bg-[#27272a] rounded cursor-pointer">
+      <label class="flex items-center gap-2 p-2 hover:bg-[#18181b] rounded-lg cursor-pointer">
         <input type="checkbox" class="member-cb accent-green-500 w-4 h-4" ${hasAccess ? 'checked' : ''} ${isLeader ? 'disabled' : ''} onchange="toggleMemberAccess('${u.id}', '${groupId}')">
         <span class="text-sm flex-1">${u.name}</span>
-        ${isLeader ? '<span class="text-[10px] text-green-400">Leader</span>' : ''}
+        ${isLeader ? '<span class="text-[10px] text-green-400 bg-green-500/10 px-2 py-1 rounded">Leader</span>' : ''}
       </label>`;
   }).join('');
-  document.getElementById('groupMembersList').innerHTML = html || '<p class="text-xs text-gray-500 text-center py-4">Belum ada user</p>';
+  document.getElementById('groupMembersList').innerHTML = html || '<p class="text-xs text-gray-600 text-center py-4">Belum ada user</p>';
 }
 
 async function toggleMemberAccess(uid, gid) {
@@ -733,6 +775,7 @@ function saveGroupChanges() {
 if (sessionStorage.getItem('nc_session')) {
   fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
     usersCache = Array.isArray(d) ? d : JSON.parse(localStorage.getItem('nc_users') || '[]');
+    if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
     showDashboard();
   }).catch(() => {
     usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
