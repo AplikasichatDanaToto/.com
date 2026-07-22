@@ -65,6 +65,8 @@
   }
   .gif-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 4px; cursor: pointer; transition: transform 0.1s; }
   .gif-item img:hover { transform: scale(1.05); }
+  
+  .action-btn { z-index: 5; position: relative; pointer-events: auto; }
 </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -248,7 +250,7 @@
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbxO0970FH7JkGU2E87yVIp8Aix1i5cojuY5CBZikeFF1NzAAXXUcIMaT251d0cecfZb/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbynpd0_uLY817uJiW_BHJ9Iw6u36suMqeKnaQkVncV3rc_B8uocCAmzHeOdaSepCbJF/exec';
 
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
@@ -264,7 +266,7 @@ let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 let lastRenderedMsgId = null;
 let currentGroupLogo = ''; 
 
-// [PERBAIKAN ANTI-DELAY] Pre-fetch Users & Groups di awal saat halaman login diload
+// Pre-fetch Users & Groups di awal saat halaman login diload
 function initApp() {
   fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
     usersCache = Array.isArray(d) ? d : [];
@@ -273,7 +275,6 @@ function initApp() {
     usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
   });
 
-  // Pre-fetch Groups agar saat login masuk, group langsung muncul tanpa delay
   fetch(`${API_URL}?action=getGroups`).then(r => r.json()).then(d => {
     if (Array.isArray(d) && d.length > 0) {
       const uniqueGroups = [];
@@ -382,14 +383,12 @@ async function showDashboard() {
     document.getElementById('adminPanel').classList.remove('hidden');
   }
   
-  // [PERBAIKAN ANTI-DELAY] Langsung ambil dari cache lokal agar group muncul instan tanpa nunggu server
   groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
-  renderGroups(); // Render instan dari memori lokal
+  renderGroups(); 
   
   fetchMessages();
   startNotifCheck();
   
-  // Update data dari server di background (tanpa membuat UI delay)
   try {
     const res = await fetch(`${API_URL}?action=getGroups`);
     const data = await res.json();
@@ -404,7 +403,7 @@ async function showDashboard() {
       });
       groupsCache = uniqueGroups;
       localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
-      renderGroups(); // Render ulang jika ada data terbaru
+      renderGroups(); 
     }
   } catch(e) {}
 }
@@ -466,9 +465,11 @@ function renderGroups() {
             ${unread > 0 ? `<span class="bg-green-500 text-black font-bold text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 ml-2 flex-shrink-0">${unread}</span>` : ''}
           </div>
         </div>
-        <div class="flex items-center gap-2 flex-shrink-0">
-          <i class="fas fa-thumbtack text-xs ${isPinned ? 'text-green-400' : 'text-gray-700 hover:text-white'}" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan"></i>
-          ${isLeader ? `<i class="fas fa-cog text-gray-700 hover:text-white text-xs" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')" title="Kelola"></i>` : ''}
+        <div class="flex items-center gap-1 flex-shrink-0">
+          <button class="action-btn w-7 h-7 flex items-center justify-center text-gray-700 hover:text-white" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan">
+            <i class="fas fa-thumbtack text-xs ${isPinned ? 'text-green-400' : ''}"></i>
+          </button>
+          ${isLeader ? `<button class="action-btn w-7 h-7 flex items-center justify-center text-gray-700 hover:text-white" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')" title="Kelola"><i class="fas fa-cog text-xs"></i></button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -939,12 +940,35 @@ async function adminDeleteGroup() {
   showToast('Group berhasil dihapus', 'success');
 }
 
-if (localStorage.getItem('nc_session')) {
-  usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
-  groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
-  messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
-  showDashboard();
+// [FIX LOGOUT SAAT REFRESH] Sistem pengecekan sesi yang menunggu data siap
+async function checkSession() {
+  if (localStorage.getItem('nc_session')) {
+    // Load local first
+    usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
+    groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
+    messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
+    
+    let user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
+    
+    // If local cache is missing user, wait for server fetch
+    if (!user) {
+      try {
+        const res = await fetch(`${API_URL}?action=getUsers`);
+        const d = await res.json();
+        usersCache = Array.isArray(d) ? d : [];
+        if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
+        user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
+      } catch(e) {}
+    }
+    
+    if (user) {
+      showDashboard();
+    } else {
+      localStorage.removeItem('nc_session');
+    }
+  }
 }
+checkSession();
 </script>
 </body>
 </html>
