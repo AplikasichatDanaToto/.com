@@ -13,7 +13,6 @@
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #52525b; }
   
   .input-style { background: #27272a; border: 1px solid #3f3f46; color: #fff; transition: all 0.2s; }
   .input-style:focus { border-color: #22c55e; outline: none; box-shadow: 0 0 0 2px rgba(34,197,94,0.2); }
@@ -25,186 +24,119 @@
   @keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .msg-in { animation: msgIn 0.2s ease-out; }
   
-  @keyframes notifIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
-  .notif-bar { animation: notifIn 0.3s ease-out; }
-  
-  ::selection { background: rgba(34,197,94,0.3); }
-  
   .modal-bg { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
-  
   .btn-primary { background: #22c55e; color: #000; font-weight: 600; transition: all 0.2s; }
   .btn-primary:hover { background: #16a34a; }
-  
   .btn-secondary { background: #3f3f46; color: #fff; transition: all 0.2s; }
   .btn-secondary:hover { background: #52525b; }
-  
-  .avatar-lg { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #3f3f46; }
-  .avatar-sm { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
-  .avatar-xs { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
-  
-  .logo-md { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; }
-  
-  .chat-img { max-width: 300px; max-height: 300px; border-radius: 8px; cursor: pointer; transition: transform 0.2s; }
-  .chat-img:hover { transform: scale(1.02); }
-  
-  .highlight { background: rgba(251,191,36,0.3); color: #fbbf24; padding: 1px 3px; border-radius: 3px; }
 
-  /* Reaction Styles */
   .msg-group { position: relative; }
   .reaction-picker { 
-    position: absolute; bottom: -12px; background: #1f1f23; border: 1px solid #3f3f46; 
-    border-radius: 20px; padding: 2px 4px; display: flex; gap: 2px; z-index: 5; 
-    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    position: absolute; top: -15px; right: 10px; background: #18181b; border: 1px solid #52525b; 
+    border-radius: 20px; padding: 4px 6px; display: flex; gap: 4px; z-index: 10; 
+    opacity: 0; pointer-events: none; transition: opacity 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
   }
   .msg-group:hover .reaction-picker { opacity: 1; pointer-events: auto; }
-  .reaction-picker button { font-size: 16px; padding: 2px 4px; border-radius: 50%; transition: transform 0.1s; }
-  .reaction-picker button:hover { transform: scale(1.2); background: #3f3f46; }
+  .reaction-picker button { font-size: 18px; padding: 2px 4px; border-radius: 50%; transition: transform 0.1s; background: transparent; border: none; cursor: pointer; }
+  .reaction-picker button:hover { transform: scale(1.3); background: #3f3f46; }
   
   .reaction-pill {
-    background: #27272a; border: 1px solid #3f3f46; font-size: 11px; padding: 2px 8px; 
-    border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; margin-top: 4px; transition: all 0.2s;
+    background: #3f3f46; border: 1px solid #52525b; font-size: 12px; padding: 4px 10px; 
+    border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; margin-top: 4px; color: #fff;
   }
-  .reaction-pill:hover { border-color: #52525b; }
-  .reaction-pill.active { background: rgba(34,197,94,0.1); border-color: #22c55e; color: #22c55e; }
+  .reaction-pill:hover { border-color: #fff; }
+  .reaction-pill.active { background: #22c55e; border-color: #22c55e; color: #000; font-weight: bold; }
+
+  .chat-img { max-width: 250px; max-height: 250px; border-radius: 8px; cursor: pointer; }
+  .highlight { background: rgba(251,191,36,0.3); color: #fbbf24; padding: 1px 3px; border-radius: 3px; }
 </style>
 </head>
 <body class="h-screen flex flex-col">
 
-  <!-- ============ LOGIN VIEW ============ -->
-  <div id="loginView" class="h-screen flex items-center justify-center relative overflow-hidden">
+  <div id="loginView" class="h-screen flex items-center justify-center relative">
     <div class="absolute inset-0 opacity-5" style="background-image: radial-gradient(#888 1px, transparent 1px); background-size: 20px 20px;"></div>
-    
     <div class="relative w-full max-w-md mx-4">
       <div class="text-center mb-6">
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-green-500 mb-4 shadow-lg shadow-green-500/20">
           <i class="fas fa-comments text-3xl text-black"></i>
         </div>
         <h1 class="text-3xl font-bold tracking-tight">NexusChat</h1>
-        <p class="text-sm text-gray-500 mt-1">Sistem Komunikasi Internal</p>
       </div>
-
       <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-2xl p-8 shadow-2xl">
         <div id="ipDisplay" class="mb-4 text-xs text-gray-400 bg-[#18181b] p-3 rounded-lg border border-[#3f3f46] flex items-center gap-2">
-          <i class="fas fa-network-wired text-green-500"></i>
-          <span>Memuat IP Perangkat...</span>
+          <i class="fas fa-network-wired text-green-500"></i><span>Memuat IP...</span>
         </div>
-
         <form id="loginForm" class="space-y-4">
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1.5 uppercase">Username</label>
-            <input type="text" id="loginUsername" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Masukkan username" required>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1.5 uppercase">Password</label>
-            <input type="password" id="loginPassword" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Masukkan password" required>
-          </div>
-          
+          <input type="text" id="loginUsername" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Username" required>
+          <input type="password" id="loginPassword" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Password" required>
           <div id="loginError" class="hidden text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-2">
-            <i class="fas fa-exclamation-circle"></i>
-            <span id="loginErrorMsg">Password salah!</span>
+            <i class="fas fa-exclamation-circle"></i><span id="loginErrorMsg">Password salah!</span>
           </div>
-
-          <button type="submit" class="btn-primary w-full py-3 rounded-lg flex items-center justify-center gap-2">
-            <i class="fas fa-sign-in-alt"></i> Masuk
-          </button>
+          <button type="submit" class="btn-primary w-full py-3 rounded-lg flex items-center justify-center gap-2"><i class="fas fa-sign-in-alt"></i> Masuk</button>
         </form>
-        
-        <div class="mt-4 text-xs text-gray-600 text-center border-t border-[#3f3f46] pt-4">
-          <p>Hubungi Admin untuk pendaftaran akun & IP</p>
-          <p class="mt-1 text-gray-700">Demo Admin: <span class="text-gray-400 font-mono">admin / admin</span></p>
-        </div>
+        <div class="mt-4 text-xs text-gray-600 text-center border-t border-[#3f3f46] pt-4">Demo: <span class="text-gray-400 font-mono">admin / admin</span></div>
       </div>
     </div>
   </div>
 
-  <!-- ============ DASHBOARD VIEW ============ -->
   <div id="dashboardView" class="hidden h-screen flex flex-col">
-    
     <header class="bg-[#1f1f23] border-b border-[#3f3f46] px-4 py-2 flex items-center justify-between flex-shrink-0 z-20">
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
-          <i class="fas fa-comments text-black text-sm"></i>
-        </div>
+        <div class="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center"><i class="fas fa-comments text-black text-sm"></i></div>
         <span class="font-bold text-sm">NexusChat</span>
       </div>
-      
       <div class="flex-1 max-w-xs mx-4">
         <div class="relative">
           <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
-          <input type="text" id="globalSearch" class="input-style w-full pl-8 pr-4 py-1.5 rounded-md text-xs" placeholder="Cari riwayat chat... (Ctrl+F)">
+          <input type="text" id="globalSearch" class="input-style w-full pl-8 pr-4 py-1.5 rounded-md text-xs" placeholder="Cari chat... (Ctrl+F)">
         </div>
       </div>
-
       <div class="flex items-center gap-3">
-        <span class="text-xs text-gray-400 hidden sm:inline">IP: <span id="userIpDisplay" class="font-mono text-green-400">-</span></span>
-        <div class="w-px h-6 bg-[#3f3f46] hidden sm:block"></div>
         <div class="text-right">
           <div class="text-xs font-bold" id="userName">-</div>
           <div class="text-[10px] text-gray-500" id="userRole">-</div>
         </div>
-        <img id="userAvatarHeader" class="avatar-sm cursor-pointer hover:opacity-80" src="https://via.placeholder.com/40x40/27272a/fff?text=U" onclick="openProfileModal()" title="Ganti Foto Profil">
-        <button id="logoutBtn" class="w-8 h-8 rounded-md hover:bg-red-500/20 text-gray-400 hover:text-red-400 flex items-center justify-center" title="Keluar">
-          <i class="fas fa-sign-out-alt text-xs"></i>
-        </button>
+        <img id="userAvatarHeader" class="w-9 h-9 rounded-full cursor-pointer object-cover" src="https://ui-avatars.com/api/?background=27272a&color=fff&name=U" onclick="openProfileModal()">
+        <button id="logoutBtn" class="w-8 h-8 rounded-md hover:bg-red-500/20 text-gray-400 hover:text-red-400 flex items-center justify-center"><i class="fas fa-sign-out-alt text-xs"></i></button>
       </div>
     </header>
 
     <div class="flex-1 flex overflow-hidden">
-      
       <aside class="w-64 bg-[#1f1f23] border-r border-[#3f3f46] flex flex-col flex-shrink-0">
         <div class="p-3 border-b border-[#3f3f46] flex items-center justify-between">
           <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Groups</span>
-          <button id="adminAddGroupBtn" class="hidden text-green-400 hover:text-white text-xs" title="Buat Group Baru">
-            <i class="fas fa-plus"></i>
-          </button>
+          <button id="adminAddGroupBtn" class="hidden text-green-400 hover:text-white text-xs"><i class="fas fa-plus"></i></button>
         </div>
         <div id="groupList" class="flex-1 overflow-y-auto py-2"></div>
-        
-        <div id="adminPanel" class="hidden p-3 border-t border-[#3f3f46] space-y-2">
-          <button id="adminManageUsersBtn" class="w-full text-xs text-left text-gray-400 hover:text-white bg-[#27272a] hover:bg-[#3f3f46] py-2 px-3 rounded-md flex items-center gap-2">
-            <i class="fas fa-users-cog"></i> Kelola User & IP
-          </button>
+        <div id="adminPanel" class="hidden p-3 border-t border-[#3f3f46]">
+          <button id="adminManageUsersBtn" class="w-full text-xs text-left text-gray-400 hover:text-white bg-[#27272a] hover:bg-[#3f3f46] py-2 px-3 rounded-md flex items-center gap-2"><i class="fas fa-users-cog"></i> Kelola User</button>
         </div>
       </aside>
 
       <main class="flex-1 flex flex-col min-w-0 relative">
         <div id="chatHeader" class="bg-[#1f1f23] border-b border-[#3f3f46] px-6 py-3 flex items-center justify-between flex-shrink-0"></div>
-
         <div id="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4 bg-[#18181b]"></div>
-
         <div class="bg-[#1f1f23] border-t border-[#3f3f46] p-4 flex-shrink-0">
           <form id="messageForm" class="flex items-center gap-2">
-            <button type="button" id="uploadImgBtn" class="w-10 h-10 rounded-lg bg-[#27272a] hover:bg-[#3f3f46] text-gray-400 hover:text-white flex items-center justify-center flex-shrink-0" title="Kirim Gambar">
-              <i class="fas fa-image"></i>
-            </button>
+            <button type="button" id="uploadImgBtn" class="w-10 h-10 rounded-lg bg-[#27272a] hover:bg-[#3f3f46] text-gray-400 hover:text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-image"></i></button>
             <input type="file" id="imageInput" class="hidden" accept="image/*">
             <input type="text" id="messageInput" class="input-style flex-1 px-4 py-2.5 rounded-lg text-sm" placeholder="Ketik pesan..." disabled>
-            <button type="submit" id="sendBtn" class="btn-primary px-4 py-2.5 rounded-lg text-sm flex-shrink-0" disabled>
-              <i class="fas fa-paper-plane"></i>
-            </button>
+            <button type="submit" id="sendBtn" class="btn-primary px-4 py-2.5 rounded-lg text-sm flex-shrink-0" disabled><i class="fas fa-paper-plane"></i></button>
           </form>
         </div>
-
-        <div id="notifBar" class="notif-bar absolute bottom-20 left-1/2 -translate-x-1/2 hidden bg-[#27272a] border border-green-500 rounded-full shadow-2xl px-5 py-2.5 flex items-center gap-3 cursor-pointer z-10" onclick="handleNotifClick()">
-          <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-          <span id="notifText" class="text-xs font-medium text-white"></span>
-          <i class="fas fa-chevron-right text-xs text-gray-400"></i>
+        <div id="notifBar" class="absolute bottom-20 left-1/2 -translate-x-1/2 hidden bg-[#27272a] border border-green-500 rounded-full shadow-2xl px-5 py-2.5 flex items-center gap-3 cursor-pointer z-10" onclick="handleNotifClick()">
+          <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div><span id="notifText" class="text-xs font-medium text-white"></span><i class="fas fa-chevron-right text-xs text-gray-400"></i>
         </div>
       </main>
     </div>
   </div>
 
-  <!-- MODAL: PROFILE -->
   <div id="profileModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
     <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-xl w-full max-w-md p-6 text-center">
       <h3 class="font-bold text-lg mb-4">Foto Profil</h3>
-      <img id="profilePreview" class="avatar-lg mx-auto mb-4" src="">
+      <img id="profilePreview" class="w-24 h-24 rounded-full mx-auto mb-4 object-cover" src="">
       <input type="file" id="profileInput" class="hidden" accept="image/*">
-      <div class="flex gap-2 justify-center mb-4">
-        <button onclick="document.getElementById('profileInput').click()" class="btn-secondary px-4 py-2 rounded-lg text-sm">
-          <i class="fas fa-upload mr-1"></i> Pilih Foto
-        </button>
-      </div>
+      <button onclick="document.getElementById('profileInput').click()" class="btn-secondary px-4 py-2 rounded-lg text-sm mb-4"><i class="fas fa-upload mr-1"></i> Pilih Foto</button>
       <div class="flex gap-2">
         <button onclick="closeModal('profileModal')" class="btn-secondary w-full py-2 rounded-lg text-sm">Batal</button>
         <button onclick="saveProfilePic()" class="btn-primary w-full py-2 rounded-lg text-sm">Simpan</button>
@@ -212,11 +144,10 @@
     </div>
   </div>
 
-  <!-- MODAL: MANAGE USERS (ADMIN) -->
   <div id="manageUsersModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
     <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
       <div class="p-4 border-b border-[#3f3f46] flex items-center justify-between">
-        <h3 class="font-bold">Kelola User, IP & Jabatan</h3>
+        <h3 class="font-bold">Kelola User & Group</h3>
         <button onclick="closeModal('manageUsersModal')" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
       </div>
       <div class="p-4 overflow-y-auto">
@@ -225,39 +156,28 @@
             <h4 class="text-xs font-bold uppercase mb-3 text-gray-400">Daftar User Baru</h4>
             <div class="space-y-3">
               <input type="text" id="newUserName" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Nama Lengkap">
-              <input type="text" id="newUserUsername" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Username Login">
+              <input type="text" id="newUserUsername" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Username">
               <input type="password" id="newUserPassword" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Password">
-              <select id="newUserRole" class="input-style w-full px-3 py-2 rounded text-xs">
-                <option value="member">Member</option>
-                <option value="leader">Leader</option>
-              </select>
-              <input type="text" id="newUserIp" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="IP Perangkat (cth: 123.45.67.89)">
+              <select id="newUserRole" class="input-style w-full px-3 py-2 rounded text-xs"><option value="member">Member</option><option value="leader">Leader</option></select>
+              <input type="text" id="newUserIp" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="IP (isi 'any' jika bebas)">
               <button onclick="adminAddUser()" class="btn-primary w-full py-2 rounded text-xs">Tambah User</button>
             </div>
           </div>
-          
           <div class="bg-[#18181b] p-4 rounded-lg border border-[#3f3f46]">
             <h4 class="text-xs font-bold uppercase mb-3 text-gray-400">Buat Group Baru</h4>
             <div class="space-y-3">
-              <input type="text" id="newGroupName" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Nama Group (cth: CS Team)">
-              <textarea id="newGroupDesc" class="input-style w-full px-3 py-2 rounded text-xs" rows="2" placeholder="Deskripsi Group"></textarea>
-              <select id="newGroupLeader" class="input-style w-full px-3 py-2 rounded text-xs">
-                <option value="">Pilih Leader...</option>
-              </select>
+              <input type="text" id="newGroupName" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Nama Group">
+              <textarea id="newGroupDesc" class="input-style w-full px-3 py-2 rounded text-xs" rows="2" placeholder="Deskripsi"></textarea>
+              <select id="newGroupLeader" class="input-style w-full px-3 py-2 rounded text-xs"></select>
               <button onclick="adminAddGroup()" class="btn-primary w-full py-2 rounded text-xs">Buat Group</button>
             </div>
           </div>
         </div>
-
-        <div class="mt-6">
-          <h4 class="text-xs font-bold uppercase mb-3 text-gray-400">Daftar User Terdaftar</h4>
-          <div id="adminUserList" class="space-y-2 max-h-40 overflow-y-auto"></div>
-        </div>
+        <div class="mt-6"><h4 class="text-xs font-bold uppercase mb-3 text-gray-400">Daftar User</h4><div id="adminUserList" class="space-y-2 max-h-40 overflow-y-auto"></div></div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: MANAGE GROUP (LEADER/ADMIN) -->
   <div id="manageGroupModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
     <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-xl w-full max-w-lg max-h-[85vh] flex flex-col">
       <div class="p-4 border-b border-[#3f3f46] flex items-center justify-between">
@@ -265,84 +185,34 @@
         <button onclick="closeModal('manageGroupModal')" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
       </div>
       <div class="p-4 overflow-y-auto">
-        <div class="flex flex-col items-center mb-4">
-          <img id="groupLogoPreview" class="logo-md mb-2" src="https://via.placeholder.com/40x40/27272a/fff?text=G">
-          <input type="file" id="groupLogoInput" class="hidden" accept="image/*">
-          <button onclick="document.getElementById('groupLogoInput').click()" class="text-xs text-green-400 hover:text-green-300">
-            <i class="fas fa-edit mr-1"></i> Ganti Logo Group
-          </button>
-        </div>
-        
         <div class="space-y-3 mb-4">
           <input type="text" id="editGroupName" class="input-style w-full px-3 py-2 rounded text-sm" placeholder="Nama Group">
           <textarea id="editGroupDesc" class="input-style w-full px-3 py-2 rounded text-sm" rows="2" placeholder="Deskripsi"></textarea>
         </div>
-
         <h4 class="text-xs font-bold uppercase mb-2 text-gray-400">Centang User untuk Masuk Group</h4>
         <div id="groupMembersList" class="space-y-1 max-h-48 overflow-y-auto bg-[#18181b] p-3 rounded-lg border border-[#3f3f46]"></div>
-        
-        <button onclick="saveGroupChanges()" class="btn-primary w-full py-2 rounded-lg mt-6">Simpan Nama & Logo Group</button>
+        <button onclick="saveGroupChanges()" class="btn-primary w-full py-2 rounded-lg mt-6">Simpan Perubahan</button>
       </div>
     </div>
   </div>
 
-  <!-- Image Viewer Modal -->
-  <div id="imageViewerModal" class="hidden fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-8 cursor-pointer" onclick="closeModal('imageViewerModal')">
-    <img id="imageViewerSrc" class="max-w-full max-h-full object-contain rounded-lg" src="">
-  </div>
-
+  <div id="imageViewerModal" class="hidden fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-8 cursor-pointer" onclick="closeModal('imageViewerModal')"><img id="imageViewerSrc" class="max-w-full max-h-full object-contain rounded-lg" src=""></div>
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
+// GANTI INI DENGAN URL GOOGLE APPS SCRIPT ANDA
+const API_URL = 'https://script.google.com/macros/s/AKfycbyajgAbeBuSQToP8eytrpvpEv-stpLPlRzrDZWGQae1n_F49CflxrHUvbrRVlaDCEaX/exec';
+
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
   .then(res => res.json())
-  .then(data => {
-    currentIP = data.ip;
-    document.getElementById('ipDisplay').innerHTML = `<i class="fas fa-network-wired text-green-500"></i> <span>IP Anda: <strong class="text-white font-mono">${currentIP}</strong></span>`;
-  })
+  .then(data => { currentIP = data.ip; document.getElementById('ipDisplay').innerHTML = `<i class="fas fa-network-wired text-green-500"></i> <span>IP Anda: <strong class="text-white font-mono">${currentIP}</strong></span>`; })
   .catch(() => { currentIP = 'Unknown'; document.getElementById('ipDisplay').innerHTML = `<i class="fas fa-network-wired text-red-500"></i> <span>Gagal deteksi IP</span>`; });
 
-const DB = {
-  init() {
-    if (!localStorage.getItem('nc_users')) {
-      const admin = [{ id: 1, name: 'Administrator', username: 'admin', password: 'admin', ip: 'any', role: 'admin', groupAccess: [], avatar: '' }];
-      localStorage.setItem('nc_users', JSON.stringify(admin));
-    }
-    if (!localStorage.getItem('nc_groups')) {
-      const groups = [
-        { id: 'g1', name: 'DISKUSI UMUM', desc: 'Group untuk semua karyawan', logo: '', leaderId: 1 },
-        { id: 'g2', name: 'KENDALA SISTEM', desc: 'Lapor kendala sistem', logo: '', leaderId: 1 }
-      ];
-      localStorage.setItem('nc_groups', JSON.stringify(groups));
-      const users = this.getUsers();
-      users[0].groupAccess = ['g1', 'g2'];
-      this.saveUsers(users);
-    }
-    if (!localStorage.getItem('nc_messages')) {
-      localStorage.setItem('nc_messages', JSON.stringify([{ id: 'm1', groupId: 'g1', userId: 0, name: 'System', avatar: '', content: 'Selamat datang di NexusChat.', timestamp: Date.now() - 3600000, type: 'text', reactions: {} }]));
-    }
-    if (!localStorage.getItem('nc_lastread')) localStorage.setItem('nc_lastread', JSON.stringify({}));
-  },
-  getUsers() { return JSON.parse(localStorage.getItem('nc_users') || '[]'); },
-  saveUsers(u) { localStorage.setItem('nc_users', JSON.stringify(u)); },
-  getGroups() { return JSON.parse(localStorage.getItem('nc_groups') || '[]'); },
-  saveGroups(g) { localStorage.setItem('nc_groups', JSON.stringify(g)); },
-  getMessages() { return JSON.parse(localStorage.getItem('nc_messages') || '[]'); },
-  saveMessages(m) { localStorage.setItem('nc_messages', JSON.stringify(m)); },
-  addMessage(msg) {
-    const msgs = this.getMessages();
-    msgs.push(msg);
-    if (msgs.length > 5000) msgs.shift();
-    this.saveMessages(msgs);
-  },
-  getLastRead() { return JSON.parse(localStorage.getItem('nc_lastread') || '{}'); },
-  setLastRead(gid, uid, ts) {
-    const lr = this.getLastRead();
-    lr[`${uid}_${gid}`] = ts;
-    localStorage.setItem('nc_lastread', JSON.stringify(lr));
-  }
-};
+let usersCache = [];
+let messagesCache = [];
+let groupsCache = [];
+let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 
 function showToast(msg, type='info') {
   const c = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
@@ -354,8 +224,7 @@ function showToast(msg, type='info') {
 }
 
 function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
-function formatTime(ts) { return new Date(ts).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }); }
-
+function formatTime(ts) { return new Date(parseInt(ts)).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }); }
 function compressImage(file, maxSize, callback) {
   const reader = new FileReader();
   reader.onload = e => {
@@ -374,20 +243,25 @@ function compressImage(file, maxSize, callback) {
   };
   reader.readAsDataURL(file);
 }
-
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function viewImage(src) { document.getElementById('imageViewerSrc').src = src; openModal('imageViewerModal'); }
 
-// AUTH
-document.getElementById('loginForm').addEventListener('submit', (e) => {
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const u = document.getElementById('loginUsername').value.trim();
   const p = document.getElementById('loginPassword').value;
   const errBox = document.getElementById('loginError');
   const errMsg = document.getElementById('loginErrorMsg');
   
-  const user = DB.getUsers().find(x => x.username === u);
+  try {
+    const res = await fetch(`${API_URL}?action=getUsers`);
+    usersCache = await res.json();
+  } catch (err) {
+    usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
+  }
+  
+  const user = usersCache.find(x => x.username === u);
   if (!user) { errMsg.textContent = 'Username tidak ditemukan. Hubungi Admin.'; errBox.classList.remove('hidden'); return; }
   if (user.ip !== 'any' && user.ip !== currentIP) { errMsg.textContent = `Akses ditolak! IP Anda (${currentIP}) tidak terdaftar.`; errBox.classList.remove('hidden'); return; }
   if (user.password !== p) { errMsg.textContent = 'Password salah! Silakan coba lagi.'; errBox.classList.remove('hidden'); return; }
@@ -397,30 +271,38 @@ document.getElementById('loginForm').addEventListener('submit', (e) => {
   showDashboard();
 });
 
-function showDashboard() {
+async function showDashboard() {
   document.getElementById('loginView').classList.add('hidden');
   document.getElementById('dashboardView').classList.remove('hidden');
-  const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
+  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
   
   document.getElementById('userName').textContent = user.name;
   document.getElementById('userRole').textContent = user.role.toUpperCase();
-  document.getElementById('userIpDisplay').textContent = currentIP;
-  document.getElementById('userAvatarHeader').src = user.avatar || `https://via.placeholder.com/40x40/27272a/fff?text=${user.name.charAt(0).toUpperCase()}`;
+  document.getElementById('userAvatarHeader').src = user.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${user.name}`;
   
   if (user.role === 'admin') {
     document.getElementById('adminAddGroupBtn').classList.remove('hidden');
     document.getElementById('adminPanel').classList.remove('hidden');
   }
+  
+  // Ambil groups
+  try {
+    const res = await fetch(`${API_URL}?action=getGroups`);
+    groupsCache = await res.json();
+  } catch(e) {
+    groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
+  }
+  
   renderGroups();
+  fetchMessages();
   startNotifCheck();
 }
 
 document.getElementById('logoutBtn').addEventListener('click', () => { sessionStorage.removeItem('nc_session'); location.reload(); });
 
-// PROFILE
 function openProfileModal() {
-  const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
-  document.getElementById('profilePreview').src = user.avatar || `https://via.placeholder.com/80x80/27272a/fff?text=${user.name.charAt(0).toUpperCase()}`;
+  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  document.getElementById('profilePreview').src = user.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${user.name}`;
   openModal('profileModal');
 }
 document.getElementById('profileInput').addEventListener('change', (e) => {
@@ -428,57 +310,81 @@ document.getElementById('profileInput').addEventListener('change', (e) => {
   if (!file) return;
   compressImage(file, 200, (src) => { document.getElementById('profilePreview').src = src; });
 });
-function saveProfilePic() {
+async function saveProfilePic() {
   const src = document.getElementById('profilePreview').src;
-  const users = DB.getUsers();
-  const user = users.find(u => u.id == sessionStorage.getItem('nc_session'));
+  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
   user.avatar = src;
-  DB.saveUsers(users);
+  localStorage.setItem('nc_users', JSON.stringify(usersCache));
   document.getElementById('userAvatarHeader').src = src;
   closeModal('profileModal');
   showToast('Foto profil diperbarui', 'success');
+  // Sync ke server
+  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateUserAccess', id: user.id, groupAccess: user.groupAccess, avatar: user.avatar, pinnedGroups: user.pinnedGroups || [] }) }); } catch(e) {}
 }
 
-// GROUPS & CHAT
 let activeGroupId = null;
 let isSearchMode = false;
-let tempGroupLogo = '';
 
 function renderGroups() {
-  const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
-  const groups = DB.getGroups();
+  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
   const list = document.getElementById('groupList');
-  const myGroups = groups.filter(g => user.role === 'admin' || user.groupAccess.includes(g.id));
+  let myGroups = groupsCache.filter(g => user.role === 'admin' || (user.groupAccess && user.groupAccess.includes(g.id)));
+  
+  // Sort: Pinned groups ke atas
+  myGroups.sort((a, b) => {
+    const aPinned = user.pinnedGroups && user.pinnedGroups.includes(a.id);
+    const bPinned = user.pinnedGroups && user.pinnedGroups.includes(b.id);
+    return (bPinned === true) - (aPinned === true);
+  });
   
   list.innerHTML = myGroups.map(g => {
     const unread = getUnreadCount(g.id, user.id);
-    const leader = DB.getUsers().find(u => u.id === g.leaderId);
     const isLeader = user.id === g.leaderId || user.role === 'admin';
+    const isPinned = user.pinnedGroups && user.pinnedGroups.includes(g.id);
     return `
       <div class="group-item ${activeGroupId === g.id ? 'active' : ''} px-3 py-2 cursor-pointer flex items-center gap-2" onclick="selectGroup('${g.id}')">
-        <img src="${g.logo || `https://via.placeholder.com/32x32/27272a/fff?text=${g.name.charAt(0)}`}" class="w-8 h-8 rounded-lg object-cover flex-shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-[#27272a] flex items-center justify-center flex-shrink-0 text-gray-400">
+           <i class="fas fa-hashtag text-xs"></i>
+        </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between">
-            <span class="text-sm font-medium text-gray-200 truncate">${g.name}</span>
-            ${unread > 0 ? `<span class="bg-green-500 text-black font-bold text-[10px] min-w-[16px] h-[16px] rounded-full flex items-center justify-center px-1 ml-2">${unread}</span>` : ''}
+            <span class="text-sm font-medium text-gray-200 break-words whitespace-normal">${g.name}</span>
+            ${unread > 0 ? `<span class="bg-green-500 text-black font-bold text-[10px] min-w-[16px] h-[16px] rounded-full flex items-center justify-center px-1 ml-2 flex-shrink-0">${unread}</span>` : ''}
           </div>
-          <div class="text-[10px] text-gray-500 truncate">${leader ? 'Lead: ' + leader.name : g.desc}</div>
         </div>
-        ${isLeader ? `<i class="fas fa-cog text-gray-500 hover:text-white text-xs" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')"></i>` : ''}
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <i class="fas fa-thumbtack text-xs ${isPinned ? 'text-green-400' : 'text-gray-600 hover:text-white'}" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan"></i>
+          ${isLeader ? `<i class="fas fa-cog text-gray-500 hover:text-white text-xs" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')" title="Kelola"></i>` : ''}
+        </div>
       </div>`;
   }).join('');
 }
 
+async function togglePinGroup(gid) {
+  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  if (!user.pinnedGroups) user.pinnedGroups = [];
+  if (user.pinnedGroups.includes(gid)) {
+    user.pinnedGroups = user.pinnedGroups.filter(id => id !== gid);
+  } else {
+    user.pinnedGroups.push(gid);
+  }
+  localStorage.setItem('nc_users', JSON.stringify(usersCache));
+  renderGroups();
+  // Sync ke server
+  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateUserAccess', id: user.id, groupAccess: user.groupAccess, avatar: user.avatar, pinnedGroups: user.pinnedGroups }) }); } catch(e) {}
+}
+
 function getUnreadCount(gid, uid) {
-  const msgs = DB.getMessages().filter(m => m.groupId === gid);
-  const lastRead = DB.getLastRead()[`${uid}_${gid}`] || 0;
-  return msgs.filter(m => m.timestamp > lastRead).length;
+  const msgs = messagesCache.filter(m => m.groupId === gid);
+  const lastRead = lastReadCache[`${uid}_${gid}`] || 0;
+  return msgs.filter(m => parseInt(m.timestamp) > lastRead).length;
 }
 
 function selectGroup(id) {
   activeGroupId = id;
-  const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
-  DB.setLastRead(id, user.id, Date.now());
+  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  lastReadCache[`${user.id}_${id}`] = Date.now();
+  localStorage.setItem('nc_lastread', JSON.stringify(lastReadCache));
   document.getElementById('messageInput').disabled = false;
   document.getElementById('sendBtn').disabled = false;
   document.getElementById('uploadImgBtn').disabled = false;
@@ -488,29 +394,40 @@ function selectGroup(id) {
 }
 
 function updateChatHeader() {
-  const g = DB.getGroups().find(x => x.id === activeGroupId);
-  const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
+  const g = groupsCache.find(x => x.id === activeGroupId);
+  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
   const isLeader = user.id === g.leaderId || user.role === 'admin';
   document.getElementById('chatHeader').innerHTML = `
     <div class="flex items-center gap-3">
-      <img src="${g.logo || `https://via.placeholder.com/40x40/27272a/fff?text=${g.name.charAt(0)}`}" class="logo-md">
+      <div class="w-10 h-10 rounded-xl bg-[#27272a] flex items-center justify-center text-gray-400"><i class="fas fa-hashtag"></i></div>
       <div>
         <h2 class="font-bold text-sm">${g.name}</h2>
         <p class="text-xs text-gray-500">${g.desc}</p>
       </div>
     </div>
-    ${isLeader ? `<button onclick="openManageGroupModal('${g.id}')" class="btn-secondary px-3 py-1.5 rounded-md text-xs"><i class="fas fa-cog mr-1"></i> Kelola Group</button>` : ''}
+    ${isLeader ? `<button onclick="openManageGroupModal('${g.id}')" class="btn-secondary px-3 py-1.5 rounded-md text-xs"><i class="fas fa-cog mr-1"></i> Kelola</button>` : ''}
   `;
+}
+
+async function fetchMessages() {
+  try {
+    const res = await fetch(`${API_URL}?action=getMessages`);
+    messagesCache = await res.json();
+    if (activeGroupId) renderMessages();
+  } catch(e) {
+    messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
+    if (activeGroupId) renderMessages();
+  }
 }
 
 function renderMessages(searchTerm = '') {
   const container = document.getElementById('messagesContainer');
-  const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
-  let msgs = DB.getMessages().filter(m => m.groupId === activeGroupId);
+  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  let msgs = messagesCache.filter(m => m.groupId === activeGroupId);
   
   if (searchTerm) {
     const term = searchTerm.toLowerCase();
-    msgs = msgs.filter(m => (m.content && m.content.toLowerCase().includes(term)) || m.name.toLowerCase().includes(term));
+    msgs = msgs.filter(m => (m.content && !m.content.startsWith('data:image') && m.content.toLowerCase().includes(term)) || m.name.toLowerCase().includes(term));
   }
   
   let html = '';
@@ -520,56 +437,52 @@ function renderMessages(searchTerm = '') {
   if (msgs.length === 0) {
     html = `<div class="h-full flex flex-col items-center justify-center text-gray-600"><i class="fas fa-comment-slash text-4xl mb-2"></i><p class="text-sm">Belum ada pesan</p></div>`;
   } else {
+    // ANTI-LAG: Hanya render 200 pesan terakhir
     msgs.slice(-200).forEach(msg => {
-      const dateStr = new Date(msg.timestamp).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+      const dateStr = new Date(parseInt(msg.timestamp)).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
       if (dateStr !== lastDate) {
         html += `<div class="flex items-center gap-4 my-4"><div class="flex-1 h-px bg-[#3f3f46]"></div><span class="text-[10px] text-gray-500 uppercase">${dateStr}</span><div class="flex-1 h-px bg-[#3f3f46]"></div></div>`;
         lastDate = dateStr;
       }
-      const isSelf = msg.userId === user.id;
-      if (msg.name === 'System') {
-        html += `<div class="text-center my-2"><span class="text-[10px] text-gray-500 bg-[#27272a] px-3 py-1 rounded-full">${msg.content}</span></div>`;
-      } else {
-        const avatar = msg.avatar || `https://via.placeholder.com/36x36/27272a/fff?text=${msg.name.charAt(0).toUpperCase()}`;
-        
-        let reactionsHtml = '';
-        if (msg.reactions && Object.keys(msg.reactions).length > 0) {
-          reactionsHtml = '<div class="flex gap-1 mt-1 flex-wrap">';
-          for (const [emoji, uids] of Object.entries(msg.reactions)) {
-            const isActive = uids.includes(user.id);
-            reactionsHtml += `<div class="reaction-pill ${isActive ? 'active' : ''}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} <span class="text-[10px]">${uids.length}</span></div>`;
-          }
-          reactionsHtml += '</div>';
+      const isSelf = msg.userId == user.id;
+      const avatar = msg.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${msg.name}`;
+      
+      let reactionsHtml = '';
+      if (msg.reactions && Object.keys(msg.reactions).length > 0) {
+        reactionsHtml = '<div class="flex gap-1 mt-1 flex-wrap">';
+        for (const [emoji, uids] of Object.entries(msg.reactions)) {
+          const isActive = uids.includes(user.id);
+          reactionsHtml += `<div class="reaction-pill ${isActive ? 'active' : ''}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} <span>${uids.length}</span></div>`;
         }
-
-        const pickerPos = isSelf ? 'right-0' : 'left-0';
-        
-        html += `
-          <div class="msg-group msg-in flex gap-3 mb-4 ${isSelf ? 'flex-row-reverse' : ''}">
-            <img src="${avatar}" class="avatar-sm flex-shrink-0">
-            <div class="max-w-[60%]">
-              <div class="flex items-center gap-2 ${isSelf ? 'justify-end' : ''}">
-                <span class="text-xs font-bold ${isSelf ? 'text-green-400' : 'text-white'}">${msg.name}</span>
-                <span class="text-[10px] text-gray-500">${formatTime(msg.timestamp)}</span>
-              </div>
-              <div class="relative">
-                ${msg.type === 'image' ? 
-                  `<img src="${msg.content}" class="chat-img mt-1" onclick="viewImage('${msg.content}')">` :
-                  `<div class="mt-1 bg-[#27272a] px-3 py-2 rounded-lg text-sm inline-block break-words" style="border-top-left-radius: 0;">${escapeHtml(msg.content)}</div>`
-                }
-                <div class="reaction-picker ${pickerPos}">
-                  ${emojis.map(e => `<button onclick="toggleReaction('${msg.id}', '${e}')">${e}</button>`).join('')}
-                </div>
-              </div>
-              ${reactionsHtml}
-            </div>
-          </div>`;
+        reactionsHtml += '</div>';
       }
+
+      const pickerPos = isSelf ? 'right-0' : 'left-0';
+      
+      html += `
+        <div class="msg-group msg-in flex gap-3 mb-4 ${isSelf ? 'flex-row-reverse' : ''}">
+          <img src="${avatar}" class="w-9 h-9 rounded-full flex-shrink-0 object-cover">
+          <div class="max-w-[60%]">
+            <div class="flex items-center gap-2 ${isSelf ? 'justify-end' : ''}">
+              <span class="text-xs font-bold ${isSelf ? 'text-green-400' : 'text-white'}">${msg.name}</span>
+              <span class="text-[10px] text-gray-500">${formatTime(msg.timestamp)}</span>
+            </div>
+            <div class="relative mt-1">
+              ${msg.type === 'image' ? 
+                `<img src="${msg.content}" class="chat-img" onclick="viewImage('${msg.content}')">` :
+                `<div class="bg-[#27272a] px-3 py-2 rounded-lg text-sm inline-block break-words" style="border-top-left-radius: 0;">${escapeHtml(msg.content)}</div>`
+              }
+              <div class="reaction-picker ${pickerPos}">
+                ${emojis.map(e => `<button onclick="toggleReaction('${msg.id}', '${e}')">${e}</button>`).join('')}
+              </div>
+            </div>
+            ${reactionsHtml}
+          </div>
+        </div>`;
     });
   }
   container.innerHTML = html;
   if (!searchTerm) container.scrollTop = container.scrollHeight;
-  
   if (searchTerm) {
     const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     container.querySelectorAll('.break-words').forEach(el => {
@@ -578,92 +491,88 @@ function renderMessages(searchTerm = '') {
   }
 }
 
-// Reaction Logic
-function toggleReaction(msgId, emoji) {
-  const msgs = DB.getMessages();
-  const msg = msgs.find(m => m.id === msgId);
+async function toggleReaction(msgId, emoji) {
+  const msg = messagesCache.find(m => m.id == msgId);
   if (!msg) return;
   if (!msg.reactions) msg.reactions = {};
   if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
   
   const uid = parseInt(sessionStorage.getItem('nc_session'));
   const idx = msg.reactions[emoji].indexOf(uid);
-  if (idx > -1) {
-    msg.reactions[emoji].splice(idx, 1);
-    if (msg.reactions[emoji].length === 0) delete msg.reactions[emoji];
-  } else {
-    msg.reactions[emoji].push(uid);
-  }
-  DB.saveMessages(msgs);
+  if (idx > -1) { msg.reactions[emoji].splice(idx, 1); if (msg.reactions[emoji].length === 0) delete msg.reactions[emoji]; }
+  else { msg.reactions[emoji].push(uid); }
+  
   renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : '');
+  
+  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateReactions', id: msgId, reactions: msg.reactions }) }); } catch(e) {}
 }
 
-document.getElementById('messageForm').addEventListener('submit', (e) => {
+document.getElementById('messageForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const input = document.getElementById('messageInput');
   if (!input.value.trim() || !activeGroupId) return;
-  const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
-  DB.addMessage({ id: 'm_' + Date.now(), groupId: activeGroupId, userId: user.id, name: user.name, avatar: user.avatar, content: input.value.trim(), timestamp: Date.now(), type: 'text', reactions: {} });
+  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  const msg = { id: 'm_' + Date.now(), groupId: activeGroupId, userId: user.id, name: user.name, avatar: user.avatar, content: input.value.trim(), timestamp: Date.now(), type: 'text', reactions: {} };
+  
+  messagesCache.push(msg);
   input.value = '';
   renderMessages();
   renderGroups();
+  
+  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveMessage', ...msg }) }); } catch(e) {}
 });
 
 document.getElementById('uploadImgBtn').addEventListener('click', () => document.getElementById('imageInput').click());
 document.getElementById('imageInput').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file || !activeGroupId) return;
-  compressImage(file, 800, (src) => {
-    const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
-    DB.addMessage({ id: 'm_' + Date.now(), groupId: activeGroupId, userId: user.id, name: user.name, avatar: user.avatar, content: src, timestamp: Date.now(), type: 'image', reactions: {} });
+  compressImage(file, 800, async (src) => {
+    const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+    const msg = { id: 'm_' + Date.now(), groupId: activeGroupId, userId: user.id, name: user.name, avatar: user.avatar, content: src, timestamp: Date.now(), type: 'image', reactions: {} };
+    messagesCache.push(msg);
     renderMessages();
     renderGroups();
+    try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveMessage', ...msg }) }); } catch(e) {}
   });
   e.target.value = '';
 });
 
 document.getElementById('globalSearch').addEventListener('input', (e) => {
-  const val = e.target.value.trim();
-  isSearchMode = val.length > 0;
-  renderMessages(val);
+  isSearchMode = e.target.value.trim().length > 0;
+  renderMessages(e.target.value.trim());
 });
-
 document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-    e.preventDefault();
-    document.getElementById('globalSearch').focus();
-  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); document.getElementById('globalSearch').focus(); }
 });
 
-// NOTIF
 function startNotifCheck() {
-  setInterval(() => {
-    const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
+  setInterval(async () => {
+    await fetchMessages();
+    const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
     if(!user) return;
-    const groups = DB.getGroups().filter(g => user.role === 'admin' || user.groupAccess.includes(g.id));
     let latestMsg = null, latestGroupId = null;
     
-    groups.forEach(g => {
+    groupsCache.forEach(g => {
       if (g.id === activeGroupId) return;
-      const msgs = DB.getMessages().filter(m => m.groupId === g.id);
-      const lastRead = DB.getLastRead()[`${user.id}_${g.id}`] || 0;
-      const newMsgs = msgs.filter(m => m.timestamp > lastRead);
+      const msgs = messagesCache.filter(m => m.groupId === g.id);
+      const lastRead = lastReadCache[`${user.id}_${g.id}`] || 0;
+      const newMsgs = msgs.filter(m => parseInt(m.timestamp) > lastRead);
       if (newMsgs.length > 0) {
         const lastMsg = newMsgs[newMsgs.length - 1];
-        if (!latestMsg || lastMsg.timestamp > latestMsg.timestamp) { latestMsg = lastMsg; latestGroupId = g.id; }
+        if (!latestMsg || parseInt(lastMsg.timestamp) > parseInt(latestMsg.timestamp)) { latestMsg = lastMsg; latestGroupId = g.id; }
       }
     });
     
     const notifBar = document.getElementById('notifBar');
     if (latestMsg) {
-      const group = DB.getGroups().find(g => g.id === latestGroupId);
+      const group = groupsCache.find(g => g.id === latestGroupId);
       document.getElementById('notifText').textContent = `Pesan baru di ${group.name} dari ${latestMsg.name}`;
       notifBar.classList.remove('hidden');
       notifBar.dataset.targetGroup = latestGroupId;
-    } else {
-      notifBar.classList.add('hidden');
-    }
+    } else { notifBar.classList.add('hidden'); }
+    
     renderGroups();
+    if (activeGroupId) renderMessages();
   }, 3000);
 }
 
@@ -673,30 +582,30 @@ function handleNotifClick() {
   document.getElementById('notifBar').classList.add('hidden');
 }
 
-// ADMIN FUNCTIONS
 document.getElementById('adminAddGroupBtn').addEventListener('click', () => { renderAdminUserList(); populateLeaderSelect(); openModal('manageUsersModal'); });
 document.getElementById('adminManageUsersBtn').addEventListener('click', () => { renderAdminUserList(); populateLeaderSelect(); openModal('manageUsersModal'); });
 
 function populateLeaderSelect() {
-  const leaders = DB.getUsers().filter(u => u.role === 'leader' || u.role === 'admin');
-  document.getElementById('newGroupLeader').innerHTML = '<option value="">Pilih Leader...</option>' + leaders.map(l => `<option value="${l.id}">${l.name} (${l.role})</option>`).join('');
+  const leaders = usersCache.filter(u => u.role === 'leader' || u.role === 'admin');
+  document.getElementById('newGroupLeader').innerHTML = '<option value="">Pilih Leader...</option>' + leaders.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
 }
 
-function adminAddGroup() {
+async function adminAddGroup() {
   const name = document.getElementById('newGroupName').value.trim();
   const desc = document.getElementById('newGroupDesc').value.trim();
   const leaderId = document.getElementById('newGroupLeader').value;
   if (!name || !leaderId) return showToast('Nama group dan Leader wajib diisi', 'error');
   
-  const groups = DB.getGroups();
-  const newG = { id: 'g_' + Date.now(), name: name.toUpperCase(), desc: desc || '-', logo: '', leaderId: parseInt(leaderId) };
-  groups.push(newG);
-  DB.saveGroups(groups);
+  const newG = { id: 'g_' + Date.now(), name: name.toUpperCase(), desc: desc || '-', leaderId: leaderId };
+  groupsCache.push(newG);
+  localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
   
-  const users = DB.getUsers();
-  const leader = users.find(u => u.id === parseInt(leaderId));
+  const leader = usersCache.find(u => u.id == leaderId);
   if (leader && !leader.groupAccess.includes(newG.id)) leader.groupAccess.push(newG.id);
-  DB.saveUsers(users);
+  localStorage.setItem('nc_users', JSON.stringify(usersCache));
+  
+  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addGroup', ...newG }) }); } catch(e) {}
+  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateUserAccess', id: leader.id, groupAccess: leader.groupAccess, avatar: leader.avatar, pinnedGroups: leader.pinnedGroups || [] }) }); } catch(e) {}
   
   document.getElementById('newGroupName').value = '';
   document.getElementById('newGroupDesc').value = '';
@@ -704,7 +613,7 @@ function adminAddGroup() {
   showToast('Group berhasil dibuat', 'success');
 }
 
-function adminAddUser() {
+async function adminAddUser() {
   const name = document.getElementById('newUserName').value.trim();
   const username = document.getElementById('newUserUsername').value.trim();
   const password = document.getElementById('newUserPassword').value.trim();
@@ -712,107 +621,90 @@ function adminAddUser() {
   const ip = document.getElementById('newUserIp').value.trim();
   if (!name || !username || !password || !ip) return showToast('Semua field wajib diisi', 'error');
   
-  const users = DB.getUsers();
-  if (users.find(u => u.username === username)) return showToast('Username sudah dipakai', 'error');
+  const newUser = { id: Date.now().toString(), name, username, password, ip, role, groupAccess: ['g1'], avatar: '', pinnedGroups: [] };
+  usersCache.push(newUser);
+  localStorage.setItem('nc_users', JSON.stringify(usersCache));
   
-  users.push({ id: Date.now(), name, username, password, ip, role, groupAccess: ['g1'], avatar: '' });
-  DB.saveUsers(users);
+  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addUser', ...newUser }) }); } catch(e) {}
+  
   document.getElementById('newUserName').value = '';
   document.getElementById('newUserUsername').value = '';
   document.getElementById('newUserPassword').value = '';
   document.getElementById('newUserIp').value = '';
   renderAdminUserList();
   populateLeaderSelect();
-  showToast('User berhasil ditambahkan', 'success');
+  showToast('User ditambahkan', 'success');
 }
 
 function renderAdminUserList() {
-  const list = document.getElementById('adminUserList');
-  list.innerHTML = DB.getUsers().filter(u => u.role !== 'admin').map(u => `
+  document.getElementById('adminUserList').innerHTML = usersCache.filter(u => u.role !== 'admin').map(u => `
     <div class="bg-[#18181b] p-3 rounded border border-[#3f3f46] flex items-center justify-between">
       <div>
-        <div class="text-sm font-medium">${u.name} <span class="text-[10px] text-gray-500">(${u.username})</span></div>
+        <div class="text-sm font-medium">${u.name}</div>
         <div class="text-[10px] text-gray-500">IP: ${u.ip} | Role: <span class="text-green-400 font-bold">${u.role}</span></div>
       </div>
     </div>
   `).join('') || `<p class="text-xs text-gray-500 text-center py-4">Belum ada user</p>`;
 }
 
-// LEADER FUNCTIONS
 let currentEditGroupId = null;
-
 function openManageGroupModal(id) {
   currentEditGroupId = id;
-  const g = DB.getGroups().find(x => x.id === id);
-  tempGroupLogo = g.logo;
+  const g = groupsCache.find(x => x.id === id);
   document.getElementById('editGroupNameTitle').textContent = g.name;
   document.getElementById('editGroupName').value = g.name;
   document.getElementById('editGroupDesc').value = g.desc;
-  document.getElementById('groupLogoPreview').src = g.logo || `https://via.placeholder.com/40x40/27272a/fff?text=${g.name.charAt(0)}`;
   renderGroupMembersChecklist(id);
   openModal('manageGroupModal');
 }
 
-document.getElementById('groupLogoInput').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  compressImage(file, 100, (src) => {
-    tempGroupLogo = src;
-    document.getElementById('groupLogoPreview').src = src;
-  });
-});
-
-// CHECKLIST ANGGOTA
 function renderGroupMembersChecklist(groupId) {
-  const g = DB.getGroups().find(x => x.id === groupId);
-  const users = DB.getUsers().filter(u => u.role !== 'admin'); // Admin auto masuk semua group
-  
-  const html = users.map(u => {
+  const g = groupsCache.find(x => x.id === groupId);
+  const html = usersCache.filter(u => u.role !== 'admin').map(u => {
     const hasAccess = u.groupAccess.includes(groupId);
-    const isLeader = u.id === g.leaderId;
+    const isLeader = u.id == g.leaderId;
     return `
       <label class="flex items-center gap-2 p-2 hover:bg-[#27272a] rounded cursor-pointer">
-        <input type="checkbox" class="member-cb accent-green-500 w-4 h-4" ${hasAccess ? 'checked' : ''} ${isLeader ? 'disabled' : ''} onchange="toggleMemberAccess(${u.id}, '${groupId}')">
-        <img src="${u.avatar || `https://via.placeholder.com/28x28/27272a/fff?text=${u.name.charAt(0)}`}" class="avatar-xs">
+        <input type="checkbox" class="member-cb accent-green-500 w-4 h-4" ${hasAccess ? 'checked' : ''} ${isLeader ? 'disabled' : ''} onchange="toggleMemberAccess('${u.id}', '${groupId}')">
         <span class="text-sm flex-1">${u.name}</span>
-        ${isLeader ? '<span class="text-[10px] text-green-400">Leader</span>' : `<span class="text-[10px] text-gray-500">${u.role}</span>`}
+        ${isLeader ? '<span class="text-[10px] text-green-400">Leader</span>' : ''}
       </label>`;
   }).join('');
-  document.getElementById('groupMembersList').innerHTML = html || '<p class="text-xs text-gray-500 text-center py-4">Belum ada user terdaftar</p>';
+  document.getElementById('groupMembersList').innerHTML = html || '<p class="text-xs text-gray-500 text-center py-4">Belum ada user</p>';
 }
 
-function toggleMemberAccess(uid, gid) {
-  const users = DB.getUsers();
-  const u = users.find(x => x.id === uid);
+async function toggleMemberAccess(uid, gid) {
+  const u = usersCache.find(x => x.id == uid);
   if (u) {
-    if (u.groupAccess.includes(gid)) {
-      u.groupAccess = u.groupAccess.filter(id => id !== gid);
-      showToast(`${u.name} dikeluarkan dari group`, 'info');
-    } else {
-      u.groupAccess.push(gid);
-      showToast(`${u.name} ditambahkan ke group`, 'success');
-    }
-    DB.saveUsers(users);
-    renderGroups(); // Update sidebar jika user yang diatur adalah diri sendiri
+    if (u.groupAccess.includes(gid)) { u.groupAccess = u.groupAccess.filter(id => id !== gid); showToast(`${u.name} dikeluarkan`, 'info'); }
+    else { u.groupAccess.push(gid); showToast(`${u.name} ditambahkan`, 'success'); }
+    localStorage.setItem('nc_users', JSON.stringify(usersCache));
+    renderGroups();
+    try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateUserAccess', id: u.id, groupAccess: u.groupAccess, avatar: u.avatar, pinnedGroups: u.pinnedGroups || [] }) }); } catch(e) {}
   }
 }
 
 function saveGroupChanges() {
-  if (!currentEditGroupId) return;
-  const groups = DB.getGroups();
-  const g = groups.find(x => x.id === currentEditGroupId);
+  const g = groupsCache.find(x => x.id === currentEditGroupId);
   g.name = document.getElementById('editGroupName').value.toUpperCase();
   g.desc = document.getElementById('editGroupDesc').value;
-  g.logo = tempGroupLogo;
-  DB.saveGroups(groups);
+  localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
   closeModal('manageGroupModal');
   renderGroups();
   if (activeGroupId === currentEditGroupId) updateChatHeader();
-  showToast('Perubahan group disimpan', 'success');
+  showToast('Perubahan disimpan', 'success');
 }
 
-DB.init();
-if (sessionStorage.getItem('nc_session')) showDashboard();
+// Auto login if session exists
+if (sessionStorage.getItem('nc_session')) {
+  fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
+    usersCache = d;
+    showDashboard();
+  }).catch(() => {
+    usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
+    showDashboard();
+  });
+}
 </script>
 </body>
 </html>
