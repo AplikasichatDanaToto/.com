@@ -14,7 +14,6 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
   
-  /* EFEK GLOW & HIDUP */
   .glass { background: rgba(20, 20, 23, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
   .neon-border { box-shadow: 0 0 10px rgba(34, 197, 94, 0.3), 0 0 20px rgba(34, 197, 94, 0.1); }
   
@@ -129,9 +128,6 @@
           <button id="adminAddGroupBtn" class="hidden w-7 h-7 rounded-md bg-green-500/10 text-green-400 hover:bg-green-500/20 text-xs items-center justify-center"><i class="fas fa-plus"></i></button>
         </div>
         <div id="groupList" class="flex-1 overflow-y-auto py-2"></div>
-        <div class="p-3 border-t border-[#27272a]">
-          <img src="https://lh3.googleusercontent.com/d/1JxvqFXKhF56O6ww8YTn-8iV3byNHvyu2" class="w-full max-w-[120px] mx-auto opacity-80 mb-2 rounded-lg" alt="Danatoto">
-        </div>
         <div id="adminPanel" class="hidden p-3 border-t border-[#27272a]">
           <button id="adminManageUsersBtn" class="w-full text-xs text-left text-gray-400 hover:text-white bg-[#18181b] hover:bg-[#27272a] py-2.5 px-3 rounded-lg flex items-center gap-2 transition-all"><i class="fas fa-users-cog text-green-400"></i> Kelola User & Group</button>
         </div>
@@ -252,7 +248,6 @@
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
-// PASTIKAN ANDA MENGGANTI URL INI DENGAN URL WEB APP ANDA
 const API_URL = 'https://script.google.com/macros/s/AKfycby3TVAZ_350S6dfV7ZFjO9uSmNYquHNVi-H4YZ0qgYlBqobpU8yKeb2etZMKGuKm406/exec';
 
 let currentIP = 'Memuat...';
@@ -269,7 +264,6 @@ let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 let lastRenderedMsgId = null;
 let currentGroupLogo = ''; 
 
-// [SPEED LOGIN] Fetch data di awal saat halaman diload agar saat tekan enter TIDAK LAG
 function initApp() {
   fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
     usersCache = Array.isArray(d) ? d : [];
@@ -323,7 +317,6 @@ function openModal(id) { document.getElementById(id).classList.remove('hidden');
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function viewImage(src) { document.getElementById('imageViewerSrc').src = src; openModal('imageViewerModal'); }
 
-// [SPEED LOGIN] Cek password dilakukan secara lokal instan
 document.getElementById('loginForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const u = document.getElementById('loginUsername').value.trim();
@@ -376,7 +369,6 @@ async function showDashboard() {
     const res = await fetch(`${API_URL}?action=getGroups`);
     const data = await res.json();
     if (Array.isArray(data) && data.length > 0) {
-      // ANTI DOBEL: Filter ID unik
       const uniqueGroups = [];
       const groupIds = new Set();
       data.forEach(g => {
@@ -748,7 +740,7 @@ function startNotifCheck() {
       prevMsgCount = messagesCache.length;
       renderMessages();
     }
-  }, 4000); // Cek setiap 4 detik agar tidak ngelag
+  }, 4000);
 }
 
 function handleNotifClick() {
@@ -782,7 +774,6 @@ async function adminAddGroup() {
   
   const newG = { id: 'g_' + Date.now(), name: name.toUpperCase(), desc: desc || '-', leaderId: leaderId, logo: currentGroupLogo };
   
-  // ANTI DOBEL: Cek di local cache dulu
   if (!groupsCache.find(g => g.id === newG.id)) {
     groupsCache.push(newG);
     localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
@@ -905,7 +896,6 @@ async function adminDeleteGroup() {
   groupsCache = groupsCache.filter(g => g.id !== gid);
   localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
   
-  // Hapus akses group dari semua user
   usersCache.forEach(u => {
     if (u.groupAccess.includes(gid)) {
       u.groupAccess = u.groupAccess.filter(id => id !== gid);
