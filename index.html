@@ -132,7 +132,6 @@
         <div id="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4 bg-[#0f0f10]"></div>
         
         <div class="glass border-t border-[#27272a] p-4 flex-shrink-0 relative">
-           <!-- Emoji & GIF Picker Dropdown -->
            <div id="pickerDropdown" class="hidden absolute bottom-20 left-4 w-80 h-64 glass rounded-xl p-3 flex flex-col z-30 shadow-2xl">
              <div class="flex gap-2 border-b border-[#27272a] pb-2 mb-2">
                 <button onclick="switchPicker('emoji')" id="tabEmoji" class="text-xs px-3 py-1 bg-green-500 text-black rounded-md font-bold">Emoji</button>
@@ -241,7 +240,7 @@
 
 <script>
 // PASTIKAN ANDA MENGGANTI URL INI DENGAN URL WEB APP ANDA
-const API_URL = 'https://script.google.com/macros/s/AKfycbzAwUjy_oE1duCcsPXQH595Bh1YGf0c04FiXVU1njHH2lvsIhIzdfQxo7PB6P1jIRo/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzikqibsJWmieBBOlFGwRfncgmAWa2UmR6LjIm2v6QFqiLSUmA8D7QLJcsdrHb9agSA/exec';
 
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
@@ -254,17 +253,19 @@ let messagesCache = [];
 let groupsCache = [];
 let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 
-// ANTI-LAG: Track pesan terakhir yang dirender
 let lastRenderedMsgId = null;
-let currentGroupLogo = ''; // Untuk menampung logo group sementara
+let currentGroupLogo = ''; 
 
-// Fetch users di background saat halaman load agar login instan
-fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
-  usersCache = Array.isArray(d) ? d : [];
-  if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
-}).catch(() => {
-  usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
-});
+// [SPEED LOGIN] Fetch data di awal saat halaman diload agar saat tekan enter TIDAK LAG
+function initApp() {
+  fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
+    usersCache = Array.isArray(d) ? d : [];
+    if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
+  }).catch(() => {
+    usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
+  });
+}
+initApp();
 
 async function apiPost(payload) {
   try {
@@ -299,7 +300,7 @@ function compressImage(file, maxSize, callback) {
       canvas.width = width; canvas.height = height;
       let ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
-      callback(canvas.toDataURL('image/jpeg', 0.6)); // Kompresi lebih agresif untuk anti-lag
+      callback(canvas.toDataURL('image/jpeg', 0.6));
     };
     img.src = e.target.result;
   };
@@ -309,48 +310,31 @@ function openModal(id) { document.getElementById(id).classList.remove('hidden');
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function viewImage(src) { document.getElementById('imageViewerSrc').src = src; openModal('imageViewerModal'); }
 
-// --- LOGIN INSTAN ---
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
+// [SPEED LOGIN] Cek password dilakukan secara lokal instan
+document.getElementById('loginForm').addEventListener('submit', (e) => {
   e.preventDefault();
-  const btn = document.getElementById('loginBtn');
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...';
-  btn.disabled = true;
-  
   const u = document.getElementById('loginUsername').value.trim();
   const p = document.getElementById('loginPassword').value;
   const errBox = document.getElementById('loginError');
   const errMsg = document.getElementById('loginErrorMsg');
   
-  // Fallback jika background fetch belum selesai
-  if (usersCache.length === 0) {
-    try {
-      const res = await fetch(`${API_URL}?action=getUsers`);
-      const data = await res.json();
-      usersCache = Array.isArray(data) ? data : [];
-      if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
-    } catch (err) {
-      usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
-    }
-  }
-
+  // Pakai data local/cache agar prosesnya instan tanpa nunggu server
   if (usersCache.length === 0 && u === 'admin' && p === 'admin') {
     usersCache.push({ id: '1', name: 'Administrator', username: 'admin', password: 'admin', ip: 'any', role: 'admin', groupAccess: [], avatar: '', pinnedGroups: [] });
     localStorage.setItem('nc_users', JSON.stringify(usersCache));
   }
   
   const user = usersCache.find(x => x.username === u);
-  if (!user) { errMsg.textContent = 'Username tidak ditemukan. Hubungi Admin.'; errBox.classList.remove('hidden'); btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Masuk'; btn.disabled = false; return; }
+  if (!user) { errMsg.textContent = 'Username tidak ditemukan. Hubungi Admin.'; errBox.classList.remove('hidden'); return; }
   
   if (user.ip && user.ip !== 'any' && user.ip !== currentIP && currentIP !== 'Memuat...' && currentIP !== 'Unknown') { 
     errMsg.textContent = `Akses ditolak! IP (${currentIP}) tidak terdaftar.`; 
     errBox.classList.remove('hidden'); 
-    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Masuk'; btn.disabled = false;
     return; 
   }
-  if (user.password !== p) { errMsg.textContent = 'Password salah! Silakan coba lagi.'; errBox.classList.remove('hidden'); btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Masuk'; btn.disabled = false; return; }
+  if (user.password !== p) { errMsg.textContent = 'Password salah! Silakan coba lagi.'; errBox.classList.remove('hidden'); return; }
   
   errBox.classList.add('hidden');
-  // GUNAKAN LOCALSTORAGE AGAR TIDAK LOGOUT SAAT REFRESH
   localStorage.setItem('nc_session', user.id);
   showDashboard();
 });
@@ -376,7 +360,6 @@ async function showDashboard() {
     document.getElementById('adminPanel').classList.remove('hidden');
   }
   
-  // AMANKAN GROUP: Sinkronisasi Local dengan Server
   try {
     const res = await fetch(`${API_URL}?action=getGroups`);
     const data = await res.json();
@@ -485,7 +468,7 @@ function selectGroup(id) {
   document.getElementById('sendBtn').disabled = false;
   document.getElementById('uploadImgBtn').disabled = false;
   document.getElementById('pickerBtn').disabled = false;
-  lastRenderedMsgId = null; // Reset render agar render ulang penuh saat ganti grup
+  lastRenderedMsgId = null; 
   renderGroups();
   renderMessages();
   updateChatHeader();
@@ -542,7 +525,6 @@ function renderMessages(searchTerm = '') {
   if (msgs.length === 0) {
     html = `<div class="h-full flex flex-col items-center justify-center text-gray-700"><i class="fas fa-comment-slash text-5xl mb-4"></i><p class="text-sm font-medium">Belum ada pesan. Mulai ngobrol sekarang!</p></div>`;
   } else {
-    // ANTI-LAG: Batasi render 100 pesan terakhir
     const renderMsgs = msgs.slice(-100);
     renderMsgs.forEach(msg => {
       const dateStr = new Date(parseInt(msg.timestamp)).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -642,7 +624,6 @@ document.getElementById('imageInput').addEventListener('change', (e) => {
   e.target.value = '';
 });
 
-// --- EMOJI & GIF PICKER ---
 document.getElementById('pickerBtn').addEventListener('click', () => {
   const dropdown = document.getElementById('pickerDropdown');
   dropdown.classList.toggle('hidden');
@@ -683,7 +664,6 @@ async function loadTrendingGifs() {
   const gifGrid = document.getElementById('gifGrid');
   gifGrid.innerHTML = '<div class="col-span-2 text-center text-xs text-gray-500 py-4">Memuat GIF...</div>';
   try {
-    // Menggunakan Giphy Public Beta Key
     const res = await fetch('https://api.giphy.com/v1/gifs/trending?api_key=dc6zaTOxFJmzC&limit=20');
     const data = await res.json();
     gifGrid.innerHTML = data.data.map(g => `<div class="gif-item"><img src="${g.images.fixed_height_small.url}" onclick="sendGif('${g.images.original.url}')"></div>`).join('');
@@ -743,12 +723,11 @@ function startNotifCheck() {
     } else { notifBar.classList.add('hidden'); notifBar.classList.remove('flex'); }
     
     renderGroups();
-    // ANTI-LAG: Hanya render ulang chat jika ada pesan baru
     if (activeGroupId && messagesCache.length !== prevMsgCount) {
       prevMsgCount = messagesCache.length;
       renderMessages();
     }
-  }, 4000); // Cek setiap 4 detik
+  }, 4000);
 }
 
 function handleNotifClick() {
@@ -757,7 +736,6 @@ function handleNotifClick() {
   document.getElementById('notifBar').classList.add('hidden');
 }
 
-// --- ADMIN CONTROLS ---
 document.getElementById('adminAddGroupBtn').addEventListener('click', () => { renderAdminUserList(); populateLeaderSelect(); openModal('manageUsersModal'); });
 document.getElementById('adminManageUsersBtn').addEventListener('click', () => { renderAdminUserList(); populateLeaderSelect(); openModal('manageUsersModal'); });
 
@@ -766,7 +744,6 @@ function populateLeaderSelect() {
   document.getElementById('newGroupLeader').innerHTML = '<option value="">Pilih Leader...</option>' + leaders.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
 }
 
-// Logo Group Preview saat buat group baru
 document.getElementById('newGroupLogoInput').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -784,7 +761,7 @@ async function adminAddGroup() {
   
   const newG = { id: 'g_' + Date.now(), name: name.toUpperCase(), desc: desc || '-', leaderId: leaderId, logo: currentGroupLogo };
   groupsCache.push(newG);
-  localStorage.setItem('nc_groups', JSON.stringify(groupsCache)); // Amankan ke local
+  localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
   
   const leader = usersCache.find(u => u.id == leaderId);
   if (leader && !leader.groupAccess.includes(newG.id)) leader.groupAccess.push(newG.id);
@@ -891,27 +868,17 @@ function saveGroupChanges() {
   closeModal('manageGroupModal');
   renderGroups();
   if (activeGroupId === currentEditGroupId) updateChatHeader();
-  // Update ke server
-  apiPost({ action: 'addGroup', ...g }); // Karena belum ada updateGroup API, kita pakai addGroup (akan duplicate di server tapi aman di local, atau bisa edit sheet manual)
+  // [PERBAIKAN] Update group ke server agar logo/nama tersimpan permanen
+  apiPost({ action: 'updateGroup', id: g.id, name: g.name, desc: g.desc, logo: g.logo });
   showToast('Perubahan disimpan', 'success');
 }
 
-// CEK SESSION SAAT HALAMAN DI-REFRESH
+// Saat halaman di refresh, cek sesi login
 if (localStorage.getItem('nc_session')) {
-  // Load dari local dulu agar instan
   usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
   groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
   messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
   showDashboard();
-  
-  // Update data dari server di background
-  fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
-    if (Array.isArray(d) && d.length > 0) {
-      usersCache = d;
-      localStorage.setItem('nc_users', JSON.stringify(usersCache));
-      renderGroups(); // re-render jika ada perubahan
-    }
-  }).catch(() => {});
 }
 </script>
 </body>
