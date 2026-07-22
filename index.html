@@ -71,9 +71,8 @@
           </div>
           <button type="submit" class="btn-primary w-full py-3 rounded-lg flex items-center justify-center gap-2"><i class="fas fa-sign-in-alt"></i> Masuk</button>
         </form>
-        <div class="mt-4 text-xs text-gray-600 text-center border-t border-[#3f3f46] pt-4">
-          IP Anda: <span id="ipDisplay" class="text-green-400 font-mono">Memuat...</span><br>
-          <span class="text-gray-700">Demo: admin / admin</span>
+        <div class="mt-4 text-xs text-gray-400 text-center border-t border-[#3f3f46] pt-4">
+          <i class="fas fa-network-wired mr-1"></i> IP Anda: <span id="ipDisplay" class="text-green-400 font-mono font-bold">Memuat...</span>
         </div>
       </div>
     </div>
@@ -200,7 +199,8 @@
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbyajgAbeBuSQToP8eytrpvpEv-stpLPlRzrDZWGQae1n_F49CflxrHUvbrRVlaDCEaX/exec';
+// PASTIKAN ANDA MENGGANTI URL INI DENGAN URL WEB APP ANDA
+const API_URL = 'https://script.google.com/macros/s/AKfycby0ev9ZIlfL3Mbj-if92-SsaqRI2KWHQ2PZh6cq6zjsrtNK7ZaQNhyMqaCBwqLRcrpV/exec';
 
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
@@ -220,6 +220,17 @@ let usersCache = [];
 let messagesCache = [];
 let groupsCache = [];
 let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
+
+// Helper untuk POST request agar tidak kena CORS
+async function apiPost(payload) {
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+    });
+  } catch(e) {}
+}
 
 function showToast(msg, type='info') {
   const c = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
@@ -261,9 +272,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   const errBox = document.getElementById('loginError');
   const errMsg = document.getElementById('loginErrorMsg');
   
+  // Coba ambil data user dari server
   try {
     const res = await fetch(`${API_URL}?action=getUsers`);
-    usersCache = await res.json();
+    const data = await res.json();
+    usersCache = Array.isArray(data) ? data : [];
   } catch (err) {
     usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
   }
@@ -276,7 +289,13 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   
   const user = usersCache.find(x => x.username === u);
   if (!user) { errMsg.textContent = 'Username tidak ditemukan. Hubungi Admin.'; errBox.classList.remove('hidden'); return; }
-  if (user.ip !== 'any' && user.ip !== currentIP) { errMsg.textContent = `Akses ditolak! IP Anda (${currentIP}) tidak terdaftar.`; errBox.classList.remove('hidden'); return; }
+  
+  // Cek IP (Jangan langsung tolak jika IP masih Memuat)
+  if (user.ip !== 'any' && user.ip !== currentIP && currentIP !== 'Memuat...' && currentIP !== 'Unknown') { 
+    errMsg.textContent = `Akses ditolak! IP Anda (${currentIP}) tidak terdaftar.`; 
+    errBox.classList.remove('hidden'); 
+    return; 
+  }
   if (user.password !== p) { errMsg.textContent = 'Password salah! Silakan coba lagi.'; errBox.classList.remove('hidden'); return; }
   
   errBox.classList.add('hidden');
@@ -289,6 +308,12 @@ async function showDashboard() {
   document.getElementById('dashboardView').classList.remove('hidden');
   const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
   
+  if (!user) {
+    sessionStorage.removeItem('nc_session');
+    location.reload();
+    return;
+  }
+  
   document.getElementById('userName').textContent = user.name;
   document.getElementById('userRole').textContent = user.role.toUpperCase();
   document.getElementById('userAvatarHeader').src = user.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${user.name}`;
@@ -298,18 +323,13 @@ async function showDashboard() {
     document.getElementById('adminPanel').classList.remove('hidden');
   }
   
+  // Ambil groups
   try {
     const res = await fetch(`${API_URL}?action=getGroups`);
-    groupsCache = await res.json();
+    const data = await res.json();
+    groupsCache = Array.isArray(data) ? data : JSON.parse(localStorage.getItem('nc_groups') || '[]');
   } catch(e) {
     groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
-    if (groupsCache.length === 0) {
-      groupsCache = [
-        { id: 'g1', name: 'DISKUSI UMUM', desc: 'Group untuk semua karyawan', leaderId: '1' },
-        { id: 'g2', name: 'KENDALA SISTEM', desc: 'Lapor kendala sistem', leaderId: '1' }
-      ];
-      localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
-    }
   }
   
   renderGroups();
@@ -337,7 +357,7 @@ async function saveProfilePic() {
   document.getElementById('userAvatarHeader').src = src;
   closeModal('profileModal');
   showToast('Foto profil diperbarui', 'success');
-  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateUserAccess', id: user.id, groupAccess: user.groupAccess, avatar: user.avatar, pinnedGroups: user.pinnedGroups || [] }) }); } catch(e) {}
+  apiPost({ action: 'updateUserAccess', id: user.id, groupAccess: user.groupAccess, avatar: user.avatar, pinnedGroups: user.pinnedGroups || [] });
 }
 
 let activeGroupId = null;
@@ -345,6 +365,7 @@ let isSearchMode = false;
 
 function renderGroups() {
   const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  if (!user) return;
   const list = document.getElementById('groupList');
   let myGroups = groupsCache.filter(g => user.role === 'admin' || (user.groupAccess && user.groupAccess.includes(g.id)));
   
@@ -387,7 +408,7 @@ async function togglePinGroup(gid) {
   }
   localStorage.setItem('nc_users', JSON.stringify(usersCache));
   renderGroups();
-  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateUserAccess', id: user.id, groupAccess: user.groupAccess, avatar: user.avatar, pinnedGroups: user.pinnedGroups }) }); } catch(e) {}
+  apiPost({ action: 'updateUserAccess', id: user.id, groupAccess: user.groupAccess, avatar: user.avatar, pinnedGroups: user.pinnedGroups });
 }
 
 function getUnreadCount(gid, uid) {
@@ -428,12 +449,12 @@ function updateChatHeader() {
 async function fetchMessages() {
   try {
     const res = await fetch(`${API_URL}?action=getMessages`);
-    messagesCache = await res.json();
-    if (activeGroupId) renderMessages();
+    const data = await res.json();
+    messagesCache = Array.isArray(data) ? data : JSON.parse(localStorage.getItem('nc_messages') || '[]');
   } catch(e) {
     messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
-    if (activeGroupId) renderMessages();
   }
+  if (activeGroupId) renderMessages();
 }
 
 function renderMessages(searchTerm = '') {
@@ -453,6 +474,7 @@ function renderMessages(searchTerm = '') {
   if (msgs.length === 0) {
     html = `<div class="h-full flex flex-col items-center justify-center text-gray-600"><i class="fas fa-comment-slash text-4xl mb-2"></i><p class="text-sm">Belum ada pesan</p></div>`;
   } else {
+    // ANTI-LAG: Hanya render 200 pesan terakhir
     msgs.slice(-200).forEach(msg => {
       const dateStr = new Date(parseInt(msg.timestamp)).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
       if (dateStr !== lastDate) {
@@ -518,7 +540,7 @@ async function toggleReaction(msgId, emoji) {
   else { msg.reactions[emoji].push(uid); }
   
   renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : '');
-  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateReactions', id: msgId, reactions: msg.reactions }) }); } catch(e) {}
+  apiPost({ action: 'updateReactions', id: msgId, reactions: msg.reactions });
 }
 
 document.getElementById('messageForm').addEventListener('submit', async (e) => {
@@ -532,20 +554,20 @@ document.getElementById('messageForm').addEventListener('submit', async (e) => {
   input.value = '';
   renderMessages();
   renderGroups();
-  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveMessage', ...msg }) }); } catch(e) {}
+  apiPost({ action: 'saveMessage', ...msg });
 });
 
 document.getElementById('uploadImgBtn').addEventListener('click', () => document.getElementById('imageInput').click());
 document.getElementById('imageInput').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file || !activeGroupId) return;
-  compressImage(file, 800, async (src) => {
+  compressImage(file, 800, (src) => {
     const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
     const msg = { id: 'm_' + Date.now(), groupId: activeGroupId, userId: user.id, name: user.name, avatar: user.avatar, content: src, timestamp: Date.now(), type: 'image', reactions: {} };
     messagesCache.push(msg);
     renderMessages();
     renderGroups();
-    try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveMessage', ...msg }) }); } catch(e) {}
+    apiPost({ action: 'saveMessage', ...msg });
   });
   e.target.value = '';
 });
@@ -617,8 +639,8 @@ async function adminAddGroup() {
   if (leader && !leader.groupAccess.includes(newG.id)) leader.groupAccess.push(newG.id);
   localStorage.setItem('nc_users', JSON.stringify(usersCache));
   
-  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addGroup', ...newG }) }); } catch(e) {}
-  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateUserAccess', id: leader.id, groupAccess: leader.groupAccess, avatar: leader.avatar, pinnedGroups: leader.pinnedGroups || [] }) }); } catch(e) {}
+  apiPost({ action: 'addGroup', ...newG });
+  apiPost({ action: 'updateUserAccess', id: leader.id, groupAccess: leader.groupAccess, avatar: leader.avatar, pinnedGroups: leader.pinnedGroups || [] });
   
   document.getElementById('newGroupName').value = '';
   document.getElementById('newGroupDesc').value = '';
@@ -638,7 +660,7 @@ async function adminAddUser() {
   usersCache.push(newUser);
   localStorage.setItem('nc_users', JSON.stringify(usersCache));
   
-  try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addUser', ...newUser }) }); } catch(e) {}
+  apiPost({ action: 'addUser', ...newUser });
   
   document.getElementById('newUserName').value = '';
   document.getElementById('newUserUsername').value = '';
@@ -693,7 +715,7 @@ async function toggleMemberAccess(uid, gid) {
     else { u.groupAccess.push(gid); showToast(`${u.name} ditambahkan`, 'success'); }
     localStorage.setItem('nc_users', JSON.stringify(usersCache));
     renderGroups();
-    try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateUserAccess', id: u.id, groupAccess: u.groupAccess, avatar: u.avatar, pinnedGroups: u.pinnedGroups || [] }) }); } catch(e) {}
+    apiPost({ action: 'updateUserAccess', id: u.id, groupAccess: u.groupAccess, avatar: u.avatar, pinnedGroups: u.pinnedGroups || [] });
   }
 }
 
@@ -710,7 +732,7 @@ function saveGroupChanges() {
 
 if (sessionStorage.getItem('nc_session')) {
   fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
-    usersCache = d;
+    usersCache = Array.isArray(d) ? d : JSON.parse(localStorage.getItem('nc_users') || '[]');
     showDashboard();
   }).catch(() => {
     usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
