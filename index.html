@@ -63,9 +63,6 @@
         <h1 class="text-3xl font-bold tracking-tight">NexusChat</h1>
       </div>
       <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-2xl p-8 shadow-2xl">
-        <div id="ipDisplay" class="mb-4 text-xs text-gray-400 bg-[#18181b] p-3 rounded-lg border border-[#3f3f46] flex items-center gap-2">
-          <i class="fas fa-network-wired text-green-500"></i><span>Memuat IP...</span>
-        </div>
         <form id="loginForm" class="space-y-4">
           <input type="text" id="loginUsername" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Username" required>
           <input type="password" id="loginPassword" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Password" required>
@@ -74,7 +71,10 @@
           </div>
           <button type="submit" class="btn-primary w-full py-3 rounded-lg flex items-center justify-center gap-2"><i class="fas fa-sign-in-alt"></i> Masuk</button>
         </form>
-        <div class="mt-4 text-xs text-gray-600 text-center border-t border-[#3f3f46] pt-4">Demo: <span class="text-gray-400 font-mono">admin / admin</span></div>
+        <div class="mt-4 text-xs text-gray-600 text-center border-t border-[#3f3f46] pt-4">
+          IP Anda: <span id="ipDisplay" class="text-green-400 font-mono">Memuat...</span><br>
+          <span class="text-gray-700">Demo: admin / admin</span>
+        </div>
       </div>
     </div>
   </div>
@@ -200,14 +200,21 @@
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
-// GANTI INI DENGAN URL GOOGLE APPS SCRIPT ANDA
 const API_URL = 'https://script.google.com/macros/s/AKfycbyajgAbeBuSQToP8eytrpvpEv-stpLPlRzrDZWGQae1n_F49CflxrHUvbrRVlaDCEaX/exec';
 
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
   .then(res => res.json())
-  .then(data => { currentIP = data.ip; document.getElementById('ipDisplay').innerHTML = `<i class="fas fa-network-wired text-green-500"></i> <span>IP Anda: <strong class="text-white font-mono">${currentIP}</strong></span>`; })
-  .catch(() => { currentIP = 'Unknown'; document.getElementById('ipDisplay').innerHTML = `<i class="fas fa-network-wired text-red-500"></i> <span>Gagal deteksi IP</span>`; });
+  .then(data => { 
+    currentIP = data.ip; 
+    const ipEl = document.getElementById('ipDisplay');
+    if (ipEl) ipEl.textContent = currentIP; 
+  })
+  .catch(() => { 
+    currentIP = 'Unknown'; 
+    const ipEl = document.getElementById('ipDisplay');
+    if (ipEl) ipEl.textContent = 'Gagal deteksi'; 
+  });
 
 let usersCache = [];
 let messagesCache = [];
@@ -260,6 +267,12 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   } catch (err) {
     usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
   }
+
+  // Sistem Fallback agar admin selalu bisa login walau server down
+  if (usersCache.length === 0 && u === 'admin' && p === 'admin') {
+    usersCache.push({ id: '1', name: 'Administrator', username: 'admin', password: 'admin', ip: 'any', role: 'admin', groupAccess: [], avatar: '', pinnedGroups: [] });
+    localStorage.setItem('nc_users', JSON.stringify(usersCache));
+  }
   
   const user = usersCache.find(x => x.username === u);
   if (!user) { errMsg.textContent = 'Username tidak ditemukan. Hubungi Admin.'; errBox.classList.remove('hidden'); return; }
@@ -285,12 +298,18 @@ async function showDashboard() {
     document.getElementById('adminPanel').classList.remove('hidden');
   }
   
-  // Ambil groups
   try {
     const res = await fetch(`${API_URL}?action=getGroups`);
     groupsCache = await res.json();
   } catch(e) {
     groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
+    if (groupsCache.length === 0) {
+      groupsCache = [
+        { id: 'g1', name: 'DISKUSI UMUM', desc: 'Group untuk semua karyawan', leaderId: '1' },
+        { id: 'g2', name: 'KENDALA SISTEM', desc: 'Lapor kendala sistem', leaderId: '1' }
+      ];
+      localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
+    }
   }
   
   renderGroups();
@@ -318,7 +337,6 @@ async function saveProfilePic() {
   document.getElementById('userAvatarHeader').src = src;
   closeModal('profileModal');
   showToast('Foto profil diperbarui', 'success');
-  // Sync ke server
   try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateUserAccess', id: user.id, groupAccess: user.groupAccess, avatar: user.avatar, pinnedGroups: user.pinnedGroups || [] }) }); } catch(e) {}
 }
 
@@ -330,7 +348,6 @@ function renderGroups() {
   const list = document.getElementById('groupList');
   let myGroups = groupsCache.filter(g => user.role === 'admin' || (user.groupAccess && user.groupAccess.includes(g.id)));
   
-  // Sort: Pinned groups ke atas
   myGroups.sort((a, b) => {
     const aPinned = user.pinnedGroups && user.pinnedGroups.includes(a.id);
     const bPinned = user.pinnedGroups && user.pinnedGroups.includes(b.id);
@@ -370,7 +387,6 @@ async function togglePinGroup(gid) {
   }
   localStorage.setItem('nc_users', JSON.stringify(usersCache));
   renderGroups();
-  // Sync ke server
   try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateUserAccess', id: user.id, groupAccess: user.groupAccess, avatar: user.avatar, pinnedGroups: user.pinnedGroups }) }); } catch(e) {}
 }
 
@@ -437,7 +453,6 @@ function renderMessages(searchTerm = '') {
   if (msgs.length === 0) {
     html = `<div class="h-full flex flex-col items-center justify-center text-gray-600"><i class="fas fa-comment-slash text-4xl mb-2"></i><p class="text-sm">Belum ada pesan</p></div>`;
   } else {
-    // ANTI-LAG: Hanya render 200 pesan terakhir
     msgs.slice(-200).forEach(msg => {
       const dateStr = new Date(parseInt(msg.timestamp)).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
       if (dateStr !== lastDate) {
@@ -451,7 +466,7 @@ function renderMessages(searchTerm = '') {
       if (msg.reactions && Object.keys(msg.reactions).length > 0) {
         reactionsHtml = '<div class="flex gap-1 mt-1 flex-wrap">';
         for (const [emoji, uids] of Object.entries(msg.reactions)) {
-          const isActive = uids.includes(user.id);
+          const isActive = uids.includes(parseInt(user.id));
           reactionsHtml += `<div class="reaction-pill ${isActive ? 'active' : ''}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} <span>${uids.length}</span></div>`;
         }
         reactionsHtml += '</div>';
@@ -503,7 +518,6 @@ async function toggleReaction(msgId, emoji) {
   else { msg.reactions[emoji].push(uid); }
   
   renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : '');
-  
   try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateReactions', id: msgId, reactions: msg.reactions }) }); } catch(e) {}
 }
 
@@ -518,7 +532,6 @@ document.getElementById('messageForm').addEventListener('submit', async (e) => {
   input.value = '';
   renderMessages();
   renderGroups();
-  
   try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveMessage', ...msg }) }); } catch(e) {}
 });
 
@@ -695,7 +708,6 @@ function saveGroupChanges() {
   showToast('Perubahan disimpan', 'success');
 }
 
-// Auto login if session exists
 if (sessionStorage.getItem('nc_session')) {
   fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
     usersCache = d;
