@@ -248,7 +248,7 @@
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycby3TVAZ_350S6dfV7ZFjO9uSmNYquHNVi-H4YZ0qgYlBqobpU8yKeb2etZMKGuKm406/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxO0970FH7JkGU2E87yVIp8Aix1i5cojuY5CBZikeFF1NzAAXXUcIMaT251d0cecfZb/exec';
 
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
@@ -264,6 +264,7 @@ let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 let lastRenderedMsgId = null;
 let currentGroupLogo = ''; 
 
+// [PERBAIKAN ANTI-DELAY] Pre-fetch Users & Groups di awal saat halaman login diload
 function initApp() {
   fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
     usersCache = Array.isArray(d) ? d : [];
@@ -271,6 +272,22 @@ function initApp() {
   }).catch(() => {
     usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
   });
+
+  // Pre-fetch Groups agar saat login masuk, group langsung muncul tanpa delay
+  fetch(`${API_URL}?action=getGroups`).then(r => r.json()).then(d => {
+    if (Array.isArray(d) && d.length > 0) {
+      const uniqueGroups = [];
+      const groupIds = new Set();
+      d.forEach(g => {
+        if (!groupIds.has(g.id)) {
+          groupIds.add(g.id);
+          uniqueGroups.push(g);
+        }
+      });
+      groupsCache = uniqueGroups;
+      localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
+    }
+  }).catch(() => {});
 }
 initApp();
 
@@ -365,6 +382,14 @@ async function showDashboard() {
     document.getElementById('adminPanel').classList.remove('hidden');
   }
   
+  // [PERBAIKAN ANTI-DELAY] Langsung ambil dari cache lokal agar group muncul instan tanpa nunggu server
+  groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
+  renderGroups(); // Render instan dari memori lokal
+  
+  fetchMessages();
+  startNotifCheck();
+  
+  // Update data dari server di background (tanpa membuat UI delay)
   try {
     const res = await fetch(`${API_URL}?action=getGroups`);
     const data = await res.json();
@@ -379,16 +404,9 @@ async function showDashboard() {
       });
       groupsCache = uniqueGroups;
       localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
-    } else {
-      groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
+      renderGroups(); // Render ulang jika ada data terbaru
     }
-  } catch(e) {
-    groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
-  }
-  
-  renderGroups();
-  fetchMessages();
-  startNotifCheck();
+  } catch(e) {}
 }
 
 document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.removeItem('nc_session'); location.reload(); });
