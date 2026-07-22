@@ -236,8 +236,19 @@
             <textarea id="editGroupDesc" class="input-style w-full px-4 py-2.5 rounded-lg text-sm" rows="2" placeholder="Deskripsi"></textarea>
           </div>
         </div>
-        <h4 class="text-xs font-bold uppercase mb-2 text-gray-500">Centang User untuk Masuk Group</h4>
+        
+        <div class="flex items-center justify-between mb-2 mt-6">
+          <h4 class="text-xs font-bold uppercase text-gray-500">Centang User untuk Masuk Group</h4>
+          <span id="memberCountDisplay" class="text-xs text-green-400 font-bold">0 Anggota</span>
+        </div>
+        
+        <div class="flex items-center gap-2 mb-2 p-2 bg-[#18181b] rounded-lg border border-[#27272a]">
+          <input type="checkbox" id="selectAllMembers" class="accent-green-500 w-4 h-4" onchange="toggleAllMembers(this)">
+          <label for="selectAllMembers" class="text-xs text-gray-300 cursor-pointer flex-1">Pilih Semua User</label>
+        </div>
+        
         <div id="groupMembersList" class="space-y-1 max-h-48 overflow-y-auto bg-[#0a0a0c] p-3 rounded-xl border border-[#27272a]"></div>
+        
         <div class="flex gap-2 mt-6">
           <button onclick="adminDeleteGroup()" class="btn-danger w-full py-2.5 rounded-lg text-sm"><i class="fas fa-trash mr-2"></i> Hapus Group</button>
           <button onclick="saveGroupChanges()" class="btn-primary w-full py-2.5 rounded-lg text-sm">Simpan Perubahan</button>
@@ -250,7 +261,7 @@
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbynpd0_uLY817uJiW_BHJ9Iw6u36suMqeKnaQkVncV3rc_B8uocCAmzHeOdaSepCbJF/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycby3TVAZ_350S6dfV7ZFjO9uSmNYquHNVi-H4YZ0qgYlBqobpU8yKeb2etZMKGuKm406/exec';
 
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
@@ -266,7 +277,6 @@ let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 let lastRenderedMsgId = null;
 let currentGroupLogo = ''; 
 
-// Pre-fetch Users & Groups di awal saat halaman login diload
 function initApp() {
   fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
     usersCache = Array.isArray(d) ? d : [];
@@ -434,6 +444,10 @@ async function saveProfilePic() {
 let activeGroupId = null;
 let isSearchMode = false;
 
+function getGroupMemberCount(gid) {
+  return usersCache.filter(u => u.role === 'admin' || (u.groupAccess && u.groupAccess.includes(gid))).length;
+}
+
 function renderGroups() {
   const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   if (!user) return;
@@ -456,6 +470,7 @@ function renderGroups() {
     const isLeader = user.id === g.leaderId || user.role === 'admin';
     const isPinned = user.pinnedGroups && user.pinnedGroups.includes(g.id);
     const logo = g.logo || `https://ui-avatars.com/api/?background=18181b&color=fff&name=${g.name.substring(0,2)}`;
+    const memberCount = getGroupMemberCount(g.id);
     return `
       <div class="group-item ${activeGroupId === g.id ? 'active' : ''} px-3 py-3 cursor-pointer flex items-center gap-3" onclick="selectGroup('${g.id}')">
         <img src="${logo}" class="w-10 h-10 rounded-xl object-cover flex-shrink-0">
@@ -464,6 +479,7 @@ function renderGroups() {
             <span class="text-sm font-semibold text-gray-200 break-words whitespace-normal">${g.name}</span>
             ${unread > 0 ? `<span class="bg-green-500 text-black font-bold text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 ml-2 flex-shrink-0">${unread}</span>` : ''}
           </div>
+          <span class="text-[10px] text-gray-600">${memberCount} anggota</span>
         </div>
         <div class="flex items-center gap-1 flex-shrink-0">
           <button class="action-btn w-7 h-7 flex items-center justify-center text-gray-700 hover:text-white" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan">
@@ -512,12 +528,13 @@ function updateChatHeader() {
   const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   const isLeader = user.id === g.leaderId || user.role === 'admin';
   const logo = g.logo || `https://ui-avatars.com/api/?background=18181b&color=fff&name=${g.name.substring(0,2)}`;
+  const memberCount = getGroupMemberCount(g.id);
   document.getElementById('chatHeader').innerHTML = `
     <div class="flex items-center gap-3">
       <img src="${logo}" class="w-10 h-10 rounded-xl object-cover">
       <div>
         <h2 class="font-bold text-sm">${g.name}</h2>
-        <p class="text-xs text-gray-500">${g.desc || 'Tidak ada deskripsi'}</p>
+        <p class="text-xs text-gray-500">${g.desc || 'Tidak ada deskripsi'} • ${memberCount} anggota</p>
       </div>
     </div>
     ${isLeader ? `<button onclick="openManageGroupModal('${g.id}')" class="btn-secondary px-3 py-2 rounded-lg text-xs"><i class="fas fa-cog mr-1"></i> Kelola</button>` : ''}
@@ -870,17 +887,54 @@ document.getElementById('editGroupLogoInput').addEventListener('change', (e) => 
 
 function renderGroupMembersChecklist(groupId) {
   const g = groupsCache.find(x => x.id === groupId);
-  const html = usersCache.filter(u => u.role !== 'admin').map(u => {
+  const targetUsers = usersCache.filter(u => u.role !== 'admin');
+  
+  let activeCount = 0;
+  const html = targetUsers.map(u => {
     const hasAccess = u.groupAccess.includes(groupId);
     const isLeader = u.id == g.leaderId;
+    if (hasAccess || isLeader) activeCount++;
     return `
       <label class="flex items-center gap-2 p-2 hover:bg-[#18181b] rounded-lg cursor-pointer">
-        <input type="checkbox" class="member-cb accent-green-500 w-4 h-4" ${hasAccess ? 'checked' : ''} ${isLeader ? 'disabled' : ''} onchange="toggleMemberAccess('${u.id}', '${groupId}')">
+        <input type="checkbox" class="member-cb accent-green-500 w-4 h-4" data-uid="${u.id}" ${hasAccess ? 'checked' : ''} ${isLeader ? 'disabled' : ''} onchange="toggleMemberAccess('${u.id}', '${groupId}')">
         <span class="text-sm flex-1">${u.name}</span>
         ${isLeader ? '<span class="text-[10px] text-green-400 bg-green-500/10 px-2 py-1 rounded">Leader</span>' : ''}
       </label>`;
   }).join('');
+  
   document.getElementById('groupMembersList').innerHTML = html || '<p class="text-xs text-gray-600 text-center py-4">Belum ada user</p>';
+  document.getElementById('memberCountDisplay').textContent = `${activeCount} Anggota`;
+  
+  // Update Select All Checkbox State
+  const selectableUsers = targetUsers.filter(u => u.id != g.leaderId);
+  const checkedCount = selectableUsers.filter(u => u.groupAccess.includes(groupId)).length;
+  const selectAllCb = document.getElementById('selectAllMembers');
+  selectAllCb.checked = selectableUsers.length > 0 && checkedCount === selectableUsers.length;
+}
+
+async function toggleAllMembers(masterCheckbox) {
+  const isChecked = masterCheckbox.checked;
+  const gid = currentEditGroupId;
+  const g = groupsCache.find(x => x.id === gid);
+  if (!g) return;
+  
+  const targetUsers = usersCache.filter(u => u.role !== 'admin' && u.id != g.leaderId);
+  
+  targetUsers.forEach(u => {
+    const hasAccess = u.groupAccess.includes(gid);
+    if (isChecked && !hasAccess) {
+      u.groupAccess.push(gid);
+      apiPost({ action: 'updateUserAccess', id: u.id, groupAccess: u.groupAccess, avatar: u.avatar, pinnedGroups: u.pinnedGroups || [] });
+    } else if (!isChecked && hasAccess) {
+      u.groupAccess = u.groupAccess.filter(id => id !== gid);
+      apiPost({ action: 'updateUserAccess', id: u.id, groupAccess: u.groupAccess, avatar: u.avatar, pinnedGroups: u.pinnedGroups || [] });
+    }
+  });
+  
+  localStorage.setItem('nc_users', JSON.stringify(usersCache));
+  renderGroupMembersChecklist(gid); // Re-render to update count and individual checkboxes
+  renderGroups(); // Update count in sidebar
+  showToast(isChecked ? 'Semua user ditambahkan' : 'Semua user dikeluarkan', 'success');
 }
 
 async function toggleMemberAccess(uid, gid) {
@@ -889,7 +943,9 @@ async function toggleMemberAccess(uid, gid) {
     if (u.groupAccess.includes(gid)) { u.groupAccess = u.groupAccess.filter(id => id !== gid); showToast(`${u.name} dikeluarkan`, 'info'); }
     else { u.groupAccess.push(gid); showToast(`${u.name} ditambahkan`, 'success'); }
     localStorage.setItem('nc_users', JSON.stringify(usersCache));
-    renderGroups();
+    
+    renderGroupMembersChecklist(gid); // Update count and select-all state
+    renderGroups(); // Update count in sidebar
     apiPost({ action: 'updateUserAccess', id: u.id, groupAccess: u.groupAccess, avatar: u.avatar, pinnedGroups: u.pinnedGroups || [] });
   }
 }
@@ -940,17 +996,14 @@ async function adminDeleteGroup() {
   showToast('Group berhasil dihapus', 'success');
 }
 
-// [FIX LOGOUT SAAT REFRESH] Sistem pengecekan sesi yang menunggu data siap
 async function checkSession() {
   if (localStorage.getItem('nc_session')) {
-    // Load local first
     usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
     groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
     messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
     
     let user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
     
-    // If local cache is missing user, wait for server fetch
     if (!user) {
       try {
         const res = await fetch(`${API_URL}?action=getUsers`);
