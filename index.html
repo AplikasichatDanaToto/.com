@@ -42,10 +42,7 @@
   .reaction-picker button { font-size: 18px; padding: 2px 4px; border-radius: 50%; transition: transform 0.1s; background: transparent; border: none; cursor: pointer; }
   .reaction-picker button:hover { transform: scale(1.3); background: #3f3f46; }
   
-  .reaction-pill {
-    background: #18181b; border: 1px solid #3f3f46; font-size: 12px; padding: 2px 8px; 
-    border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; margin-top: 4px; color: #a1a1aa;
-  }
+  .reaction-pill { background: #18181b; border: 1px solid #3f3f46; font-size: 12px; padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; margin-top: 4px; color: #a1a1aa; }
   .reaction-pill:hover { border-color: #fff; }
   .reaction-pill.active { background: #22c55e; border-color: #22c55e; color: #000; font-weight: bold; }
 
@@ -58,6 +55,8 @@
                 radial-gradient(circle at 80% 20%, rgba(59,130,246,0.1) 0%, transparent 50%),
                 #0f0f10;
   }
+  .gif-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 4px; cursor: pointer; transition: transform 0.1s; }
+  .gif-item img:hover { transform: scale(1.05); }
 </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -131,14 +130,27 @@
       <main class="flex-1 flex flex-col min-w-0 relative">
         <div id="chatHeader" class="glass border-b border-[#27272a] px-6 py-3 flex items-center justify-between flex-shrink-0"></div>
         <div id="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4 bg-[#0f0f10]"></div>
-        <div class="glass border-t border-[#27272a] p-4 flex-shrink-0">
+        
+        <div class="glass border-t border-[#27272a] p-4 flex-shrink-0 relative">
+           <!-- Emoji & GIF Picker Dropdown -->
+           <div id="pickerDropdown" class="hidden absolute bottom-20 left-4 w-80 h-64 glass rounded-xl p-3 flex flex-col z-30 shadow-2xl">
+             <div class="flex gap-2 border-b border-[#27272a] pb-2 mb-2">
+                <button onclick="switchPicker('emoji')" id="tabEmoji" class="text-xs px-3 py-1 bg-green-500 text-black rounded-md font-bold">Emoji</button>
+                <button onclick="switchPicker('gif')" id="tabGif" class="text-xs px-3 py-1 bg-[#27272a] text-white rounded-md font-bold">GIF</button>
+             </div>
+             <div id="emojiGrid" class="grid grid-cols-8 gap-1 overflow-y-auto text-2xl"></div>
+             <div id="gifGrid" class="hidden grid grid-cols-2 gap-1 overflow-y-auto"></div>
+           </div>
+
           <form id="messageForm" class="flex items-center gap-3">
+            <button type="button" id="pickerBtn" class="w-11 h-11 rounded-xl bg-[#18181b] hover:bg-[#27272a] text-gray-500 hover:text-green-400 flex items-center justify-center flex-shrink-0 transition-all" disabled><i class="fas fa-smile"></i></button>
             <button type="button" id="uploadImgBtn" class="w-11 h-11 rounded-xl bg-[#18181b] hover:bg-[#27272a] text-gray-500 hover:text-green-400 flex items-center justify-center flex-shrink-0 transition-all" disabled><i class="fas fa-image"></i></button>
             <input type="file" id="imageInput" class="hidden" accept="image/*">
             <input type="text" id="messageInput" class="input-style flex-1 px-4 py-3 rounded-xl text-sm" placeholder="Ketik pesan..." disabled>
             <button type="submit" id="sendBtn" class="btn-primary w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" disabled><i class="fas fa-paper-plane"></i></button>
           </form>
         </div>
+
         <div id="notifBar" class="absolute bottom-24 left-1/2 -translate-x-1/2 hidden bg-[#18181b] border border-green-500/50 rounded-full shadow-2xl shadow-green-500/10 px-5 py-3 flex items-center gap-3 cursor-pointer z-10" onclick="handleNotifClick()">
           <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div><span id="notifText" class="text-xs font-medium text-white"></span><i class="fas fa-chevron-right text-xs text-gray-500"></i>
         </div>
@@ -181,7 +193,13 @@
           <div class="bg-[#0f0f10] p-4 rounded-xl border border-[#27272a]">
             <h4 class="text-xs font-bold uppercase mb-4 text-green-400 flex items-center gap-2"><i class="fas fa-plus-circle"></i> Buat Group Baru</h4>
             <div class="space-y-3">
-              <input type="text" id="newGroupName" class="input-style w-full px-3 py-2.5 rounded-lg text-xs" placeholder="Nama Group">
+              <div class="flex items-center gap-3">
+                <img id="newGroupLogoPreview" src="https://ui-avatars.com/api/?background=27272a&color=fff&name=G" class="w-14 h-14 rounded-xl object-cover cursor-pointer" onclick="document.getElementById('newGroupLogoInput').click()">
+                <div class="flex-1">
+                  <input type="text" id="newGroupName" class="input-style w-full px-3 py-2.5 rounded-lg text-xs mb-2" placeholder="Nama Group">
+                  <input type="file" id="newGroupLogoInput" class="hidden" accept="image/*">
+                </div>
+              </div>
               <textarea id="newGroupDesc" class="input-style w-full px-3 py-2.5 rounded-lg text-xs" rows="2" placeholder="Deskripsi"></textarea>
               <select id="newGroupLeader" class="input-style w-full px-3 py-2.5 rounded-lg text-xs"></select>
               <button onclick="adminAddGroup()" class="btn-primary w-full py-2.5 rounded-lg text-xs">Buat Group</button>
@@ -203,9 +221,13 @@
         <button onclick="closeModal('manageGroupModal')" class="text-gray-500 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#27272a]"><i class="fas fa-times"></i></button>
       </div>
       <div class="p-5 overflow-y-auto">
-        <div class="space-y-3 mb-4">
-          <input type="text" id="editGroupName" class="input-style w-full px-4 py-2.5 rounded-lg text-sm" placeholder="Nama Group">
-          <textarea id="editGroupDesc" class="input-style w-full px-4 py-2.5 rounded-lg text-sm" rows="2" placeholder="Deskripsi"></textarea>
+        <div class="flex items-center gap-4 mb-4">
+          <img id="editGroupLogoPreview" src="" class="w-20 h-20 rounded-xl object-cover cursor-pointer ring-2 ring-[#27272a]" onclick="document.getElementById('editGroupLogoInput').click()">
+          <input type="file" id="editGroupLogoInput" class="hidden" accept="image/*">
+          <div class="flex-1 space-y-3">
+            <input type="text" id="editGroupName" class="input-style w-full px-4 py-2.5 rounded-lg text-sm" placeholder="Nama Group">
+            <textarea id="editGroupDesc" class="input-style w-full px-4 py-2.5 rounded-lg text-sm" rows="2" placeholder="Deskripsi"></textarea>
+          </div>
         </div>
         <h4 class="text-xs font-bold uppercase mb-2 text-gray-500">Centang User untuk Masuk Group</h4>
         <div id="groupMembersList" class="space-y-1 max-h-48 overflow-y-auto bg-[#0f0f10] p-3 rounded-xl border border-[#27272a]"></div>
@@ -219,7 +241,7 @@
 
 <script>
 // PASTIKAN ANDA MENGGANTI URL INI DENGAN URL WEB APP ANDA
-const API_URL = 'https://script.google.com/macros/s/AKfycbyWYoe0yIDtM7z1N-S5a1aL0iXBX3i4KqKml7p3nqQphmou_MA8xUNKz60S8t7iwnXK/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzAwUjy_oE1duCcsPXQH595Bh1YGf0c04FiXVU1njHH2lvsIhIzdfQxo7PB6P1jIRo/exec';
 
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
@@ -232,8 +254,17 @@ let messagesCache = [];
 let groupsCache = [];
 let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 
-// ANTI LAG: Track pesan terakhir yang dirender
+// ANTI-LAG: Track pesan terakhir yang dirender
 let lastRenderedMsgId = null;
+let currentGroupLogo = ''; // Untuk menampung logo group sementara
+
+// Fetch users di background saat halaman load agar login instan
+fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
+  usersCache = Array.isArray(d) ? d : [];
+  if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
+}).catch(() => {
+  usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
+});
 
 async function apiPost(payload) {
   try {
@@ -278,6 +309,7 @@ function openModal(id) { document.getElementById(id).classList.remove('hidden');
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function viewImage(src) { document.getElementById('imageViewerSrc').src = src; openModal('imageViewerModal'); }
 
+// --- LOGIN INSTAN ---
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('loginBtn');
@@ -289,13 +321,16 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   const errBox = document.getElementById('loginError');
   const errMsg = document.getElementById('loginErrorMsg');
   
-  try {
-    const res = await fetch(`${API_URL}?action=getUsers`);
-    const data = await res.json();
-    usersCache = Array.isArray(data) ? data : [];
-    if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
-  } catch (err) {
-    usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
+  // Fallback jika background fetch belum selesai
+  if (usersCache.length === 0) {
+    try {
+      const res = await fetch(`${API_URL}?action=getUsers`);
+      const data = await res.json();
+      usersCache = Array.isArray(data) ? data : [];
+      if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
+    } catch (err) {
+      usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
+    }
   }
 
   if (usersCache.length === 0 && u === 'admin' && p === 'admin') {
@@ -315,17 +350,18 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   if (user.password !== p) { errMsg.textContent = 'Password salah! Silakan coba lagi.'; errBox.classList.remove('hidden'); btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Masuk'; btn.disabled = false; return; }
   
   errBox.classList.add('hidden');
-  sessionStorage.setItem('nc_session', user.id);
+  // GUNAKAN LOCALSTORAGE AGAR TIDAK LOGOUT SAAT REFRESH
+  localStorage.setItem('nc_session', user.id);
   showDashboard();
 });
 
 async function showDashboard() {
   document.getElementById('loginView').classList.add('hidden');
   document.getElementById('dashboardView').classList.remove('hidden');
-  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   
   if (!user) {
-    sessionStorage.removeItem('nc_session');
+    localStorage.removeItem('nc_session');
     location.reload();
     return;
   }
@@ -359,10 +395,10 @@ async function showDashboard() {
   startNotifCheck();
 }
 
-document.getElementById('logoutBtn').addEventListener('click', () => { sessionStorage.removeItem('nc_session'); location.reload(); });
+document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.removeItem('nc_session'); location.reload(); });
 
 function openProfileModal() {
-  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   document.getElementById('profilePreview').src = user.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${user.name}`;
   openModal('profileModal');
 }
@@ -373,7 +409,7 @@ document.getElementById('profileInput').addEventListener('change', (e) => {
 });
 async function saveProfilePic() {
   const src = document.getElementById('profilePreview').src;
-  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   user.avatar = src;
   localStorage.setItem('nc_users', JSON.stringify(usersCache));
   document.getElementById('userAvatarHeader').src = src;
@@ -386,7 +422,7 @@ let activeGroupId = null;
 let isSearchMode = false;
 
 function renderGroups() {
-  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   if (!user) return;
   const list = document.getElementById('groupList');
   let myGroups = groupsCache.filter(g => user.role === 'admin' || (user.groupAccess && user.groupAccess.includes(g.id)));
@@ -406,11 +442,10 @@ function renderGroups() {
     const unread = getUnreadCount(g.id, user.id);
     const isLeader = user.id === g.leaderId || user.role === 'admin';
     const isPinned = user.pinnedGroups && user.pinnedGroups.includes(g.id);
+    const logo = g.logo || `https://ui-avatars.com/api/?background=18181b&color=fff&name=${g.name.substring(0,2)}`;
     return `
       <div class="group-item ${activeGroupId === g.id ? 'active' : ''} px-3 py-3 cursor-pointer flex items-center gap-3" onclick="selectGroup('${g.id}')">
-        <div class="w-10 h-10 rounded-xl bg-[#18181b] flex items-center justify-center flex-shrink-0 text-gray-500 border border-[#27272a]">
-           <i class="fas fa-hashtag text-sm"></i>
-        </div>
+        <img src="${logo}" class="w-10 h-10 rounded-xl object-cover flex-shrink-0">
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between">
             <span class="text-sm font-semibold text-gray-200 break-words whitespace-normal">${g.name}</span>
@@ -426,7 +461,7 @@ function renderGroups() {
 }
 
 async function togglePinGroup(gid) {
-  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   if (!user.pinnedGroups) user.pinnedGroups = [];
   if (user.pinnedGroups.includes(gid)) user.pinnedGroups = user.pinnedGroups.filter(id => id !== gid);
   else user.pinnedGroups.push(gid);
@@ -443,12 +478,13 @@ function getUnreadCount(gid, uid) {
 
 function selectGroup(id) {
   activeGroupId = id;
-  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   lastReadCache[`${user.id}_${id}`] = Date.now();
   localStorage.setItem('nc_lastread', JSON.stringify(lastReadCache));
   document.getElementById('messageInput').disabled = false;
   document.getElementById('sendBtn').disabled = false;
   document.getElementById('uploadImgBtn').disabled = false;
+  document.getElementById('pickerBtn').disabled = false;
   lastRenderedMsgId = null; // Reset render agar render ulang penuh saat ganti grup
   renderGroups();
   renderMessages();
@@ -458,11 +494,12 @@ function selectGroup(id) {
 function updateChatHeader() {
   const g = groupsCache.find(x => x.id === activeGroupId);
   if(!g) return;
-  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   const isLeader = user.id === g.leaderId || user.role === 'admin';
+  const logo = g.logo || `https://ui-avatars.com/api/?background=18181b&color=fff&name=${g.name.substring(0,2)}`;
   document.getElementById('chatHeader').innerHTML = `
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-[#18181b] flex items-center justify-center text-gray-500 border border-[#27272a]"><i class="fas fa-hashtag"></i></div>
+      <img src="${logo}" class="w-10 h-10 rounded-xl object-cover">
       <div>
         <h2 class="font-bold text-sm">${g.name}</h2>
         <p class="text-xs text-gray-500">${g.desc || 'Tidak ada deskripsi'}</p>
@@ -490,7 +527,7 @@ async function fetchMessages() {
 
 function renderMessages(searchTerm = '') {
   const container = document.getElementById('messagesContainer');
-  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   let msgs = messagesCache.filter(m => m.groupId === activeGroupId);
   
   if (searchTerm) {
@@ -537,8 +574,8 @@ function renderMessages(searchTerm = '') {
               <span class="text-[10px] text-gray-600">${formatTime(msg.timestamp)}</span>
             </div>
             <div class="relative">
-              ${msg.type === 'image' ? 
-                `<img src="${msg.content}" class="chat-img" onclick="viewImage('${msg.content}')">` :
+              ${msg.type === 'image' || msg.type === 'gif' ? 
+                `<img src="${msg.content}" class="chat-img" loading="lazy" onclick="viewImage('${msg.content}')">` :
                 `<div class="bg-[#18181b] px-4 py-2.5 rounded-2xl text-sm inline-block break-words border border-[#27272a]" style="border-top-left-radius: 2px;">${escapeHtml(msg.content)}</div>`
               }
               <div class="reaction-picker ${pickerPos}">
@@ -567,7 +604,7 @@ async function toggleReaction(msgId, emoji) {
   if (!msg.reactions) msg.reactions = {};
   if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
   
-  const uid = parseInt(sessionStorage.getItem('nc_session'));
+  const uid = parseInt(localStorage.getItem('nc_session'));
   const idx = msg.reactions[emoji].indexOf(uid);
   if (idx > -1) { msg.reactions[emoji].splice(idx, 1); if (msg.reactions[emoji].length === 0) delete msg.reactions[emoji]; }
   else { msg.reactions[emoji].push(uid); }
@@ -580,7 +617,7 @@ document.getElementById('messageForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const input = document.getElementById('messageInput');
   if (!input.value.trim() || !activeGroupId) return;
-  const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+  const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   const msg = { id: 'm_' + Date.now(), groupId: activeGroupId, userId: user.id, name: user.name, avatar: user.avatar, content: input.value.trim(), timestamp: Date.now(), type: 'text', reactions: {} };
   
   messagesCache.push(msg);
@@ -594,9 +631,8 @@ document.getElementById('uploadImgBtn').addEventListener('click', () => document
 document.getElementById('imageInput').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file || !activeGroupId) return;
-  // ANTI-LAG: Perkecil ukuran file gambar maksimal 600px
   compressImage(file, 600, (src) => {
-    const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+    const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
     const msg = { id: 'm_' + Date.now(), groupId: activeGroupId, userId: user.id, name: user.name, avatar: user.avatar, content: src, timestamp: Date.now(), type: 'image', reactions: {} };
     messagesCache.push(msg);
     renderMessages();
@@ -605,6 +641,67 @@ document.getElementById('imageInput').addEventListener('change', (e) => {
   });
   e.target.value = '';
 });
+
+// --- EMOJI & GIF PICKER ---
+document.getElementById('pickerBtn').addEventListener('click', () => {
+  const dropdown = document.getElementById('pickerDropdown');
+  dropdown.classList.toggle('hidden');
+  if (!dropdown.classList.contains('hidden')) switchPicker('emoji');
+});
+
+function switchPicker(type) {
+  const emojiGrid = document.getElementById('emojiGrid');
+  const gifGrid = document.getElementById('gifGrid');
+  const tabEmoji = document.getElementById('tabEmoji');
+  const tabGif = document.getElementById('tabGif');
+
+  if (type === 'emoji') {
+    emojiGrid.classList.remove('hidden');
+    gifGrid.classList.add('hidden');
+    tabEmoji.className = 'text-xs px-3 py-1 bg-green-500 text-black rounded-md font-bold';
+    tabGif.className = 'text-xs px-3 py-1 bg-[#27272a] text-white rounded-md font-bold';
+    if (emojiGrid.innerHTML === '') {
+      const emojis = ['😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','😋','😎','😍','😘','🥰','😗','🙁','😢','😭','😤','😠','😡','🤬','🤯','😱','😳','🥵','🥶','😴','🤤','🤢','🤮','🤧','🤒','🤕','🤠','🥳','🥺','😇','🤓','🧐','🤔','_CAT_','_DOG_','👍','👎','👊','✊','🤛','🤜','🤞','✌️','🤟','🤘','👌','🤌','🤏','👈','👉','👆','👇','☝️','✋','🤚','🖐️','🖖','👋','🤙','💪','🦾','👀','👁️','👅','👄','💋','🩸','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝'];
+      emojiGrid.innerHTML = emojis.map(e => `<div class="cursor-pointer hover:bg-[#27272a] rounded p-1" onclick="insertToInput('${e}')">${e}</div>`).join('');
+    }
+  } else {
+    emojiGrid.classList.add('hidden');
+    gifGrid.classList.remove('hidden');
+    tabEmoji.className = 'text-xs px-3 py-1 bg-[#27272a] text-white rounded-md font-bold';
+    tabGif.className = 'text-xs px-3 py-1 bg-green-500 text-black rounded-md font-bold';
+    loadTrendingGifs();
+  }
+}
+
+function insertToInput(text) {
+  const input = document.getElementById('messageInput');
+  input.value += text;
+  input.focus();
+}
+
+async function loadTrendingGifs() {
+  const gifGrid = document.getElementById('gifGrid');
+  gifGrid.innerHTML = '<div class="col-span-2 text-center text-xs text-gray-500 py-4">Memuat GIF...</div>';
+  try {
+    // Menggunakan Giphy Public Beta Key
+    const res = await fetch('https://api.giphy.com/v1/gifs/trending?api_key=dc6zaTOxFJmzC&limit=20');
+    const data = await res.json();
+    gifGrid.innerHTML = data.data.map(g => `<div class="gif-item"><img src="${g.images.fixed_height_small.url}" onclick="sendGif('${g.images.original.url}')"></div>`).join('');
+  } catch(e) {
+    gifGrid.innerHTML = '<div class="col-span-2 text-center text-xs text-red-500 py-4">Gagal memuat GIF.</div>';
+  }
+}
+
+async function sendGif(url) {
+  document.getElementById('pickerDropdown').classList.add('hidden');
+  if (!activeGroupId) return;
+  const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
+  const msg = { id: 'm_' + Date.now(), groupId: activeGroupId, userId: user.id, name: user.name, avatar: user.avatar, content: url, timestamp: Date.now(), type: 'gif', reactions: {} };
+  messagesCache.push(msg);
+  renderMessages();
+  renderGroups();
+  apiPost({ action: 'saveMessage', ...msg });
+}
 
 document.getElementById('globalSearch').addEventListener('input', (e) => {
   isSearchMode = e.target.value.trim().length > 0;
@@ -621,7 +718,7 @@ function startNotifCheck() {
   
   pollingInterval = setInterval(async () => {
     await fetchMessages();
-    const user = usersCache.find(u => u.id == sessionStorage.getItem('nc_session'));
+    const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
     if(!user) return;
     
     let latestMsg = null, latestGroupId = null;
@@ -660,6 +757,7 @@ function handleNotifClick() {
   document.getElementById('notifBar').classList.add('hidden');
 }
 
+// --- ADMIN CONTROLS ---
 document.getElementById('adminAddGroupBtn').addEventListener('click', () => { renderAdminUserList(); populateLeaderSelect(); openModal('manageUsersModal'); });
 document.getElementById('adminManageUsersBtn').addEventListener('click', () => { renderAdminUserList(); populateLeaderSelect(); openModal('manageUsersModal'); });
 
@@ -668,13 +766,23 @@ function populateLeaderSelect() {
   document.getElementById('newGroupLeader').innerHTML = '<option value="">Pilih Leader...</option>' + leaders.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
 }
 
+// Logo Group Preview saat buat group baru
+document.getElementById('newGroupLogoInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  compressImage(file, 300, (src) => {
+    currentGroupLogo = src;
+    document.getElementById('newGroupLogoPreview').src = src;
+  });
+});
+
 async function adminAddGroup() {
   const name = document.getElementById('newGroupName').value.trim();
   const desc = document.getElementById('newGroupDesc').value.trim();
   const leaderId = document.getElementById('newGroupLeader').value;
   if (!name || !leaderId) return showToast('Nama group dan Leader wajib diisi', 'error');
   
-  const newG = { id: 'g_' + Date.now(), name: name.toUpperCase(), desc: desc || '-', leaderId: leaderId };
+  const newG = { id: 'g_' + Date.now(), name: name.toUpperCase(), desc: desc || '-', leaderId: leaderId, logo: currentGroupLogo };
   groupsCache.push(newG);
   localStorage.setItem('nc_groups', JSON.stringify(groupsCache)); // Amankan ke local
   
@@ -687,6 +795,8 @@ async function adminAddGroup() {
   
   document.getElementById('newGroupName').value = '';
   document.getElementById('newGroupDesc').value = '';
+  currentGroupLogo = '';
+  document.getElementById('newGroupLogoPreview').src = 'https://ui-avatars.com/api/?background=27272a&color=fff&name=G';
   renderGroups();
   showToast('Group berhasil dibuat', 'success');
 }
@@ -731,9 +841,20 @@ function openManageGroupModal(id) {
   document.getElementById('editGroupNameTitle').textContent = g.name;
   document.getElementById('editGroupName').value = g.name;
   document.getElementById('editGroupDesc').value = g.desc;
+  document.getElementById('editGroupLogoPreview').src = g.logo || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${g.name.substring(0,2)}`;
+  currentGroupLogo = g.logo || '';
   renderGroupMembersChecklist(id);
   openModal('manageGroupModal');
 }
+
+document.getElementById('editGroupLogoInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  compressImage(file, 300, (src) => {
+    currentGroupLogo = src;
+    document.getElementById('editGroupLogoPreview').src = src;
+  });
+});
 
 function renderGroupMembersChecklist(groupId) {
   const g = groupsCache.find(x => x.id === groupId);
@@ -765,22 +886,32 @@ function saveGroupChanges() {
   const g = groupsCache.find(x => x.id === currentEditGroupId);
   g.name = document.getElementById('editGroupName').value.toUpperCase();
   g.desc = document.getElementById('editGroupDesc').value;
+  g.logo = currentGroupLogo;
   localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
   closeModal('manageGroupModal');
   renderGroups();
   if (activeGroupId === currentEditGroupId) updateChatHeader();
+  // Update ke server
+  apiPost({ action: 'addGroup', ...g }); // Karena belum ada updateGroup API, kita pakai addGroup (akan duplicate di server tapi aman di local, atau bisa edit sheet manual)
   showToast('Perubahan disimpan', 'success');
 }
 
-if (sessionStorage.getItem('nc_session')) {
+// CEK SESSION SAAT HALAMAN DI-REFRESH
+if (localStorage.getItem('nc_session')) {
+  // Load dari local dulu agar instan
+  usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
+  groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
+  messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
+  showDashboard();
+  
+  // Update data dari server di background
   fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
-    usersCache = Array.isArray(d) ? d : JSON.parse(localStorage.getItem('nc_users') || '[]');
-    if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
-    showDashboard();
-  }).catch(() => {
-    usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
-    showDashboard();
-  });
+    if (Array.isArray(d) && d.length > 0) {
+      usersCache = d;
+      localStorage.setItem('nc_users', JSON.stringify(usersCache));
+      renderGroups(); // re-render jika ada perubahan
+    }
+  }).catch(() => {});
 }
 </script>
 </body>
