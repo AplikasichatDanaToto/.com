@@ -9,92 +9,133 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
   * { font-family: 'Inter', sans-serif; }
-  body { background: #18181b; color: #e4e4e7; margin: 0; overflow: hidden; }
-  ::-webkit-scrollbar { width: 6px; }
+  body { background: #1a1a1a; color: #e4e4e7; margin: 0; overflow: hidden; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
-  .input-bg { background: #27272a; border: 1px solid #3f3f46; }
-  .input-bg:focus { border-color: #22c55e; outline: none; box-shadow: 0 0 0 2px rgba(34,197,94,0.2); }
+  ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+  
+  .input-style { background: #27272a; border: 1px solid #3f3f46; color: #fff; transition: all 0.2s; }
+  .input-style:focus { border-color: #22c55e; outline: none; box-shadow: 0 0 0 2px rgba(34,197,94,0.2); }
+  
   .group-item { transition: all 0.15s; border-left: 3px solid transparent; }
   .group-item:hover { background: #27272a; }
   .group-item.active { background: #27272a; border-left-color: #22c55e; }
+  
   @keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .msg-in { animation: msgIn 0.2s ease-out; }
+  
+  @keyframes notifIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  .notif-bar { animation: notifIn 0.3s ease-out; }
+  
   ::selection { background: rgba(34,197,94,0.3); }
+  
+  .modal-bg { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+  
+  .btn-primary { background: #22c55e; color: #000; font-weight: 600; transition: all 0.2s; }
+  .btn-primary:hover { background: #16a34a; }
+  
+  .btn-secondary { background: #3f3f46; color: #fff; transition: all 0.2s; }
+  .btn-secondary:hover { background: #52525b; }
+  
+  .avatar-lg { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #3f3f46; }
+  .avatar-sm { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+  .avatar-xs { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+  
+  .logo-md { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; }
+  
+  .chat-img { max-width: 300px; max-height: 300px; border-radius: 8px; cursor: pointer; transition: transform 0.2s; }
+  .chat-img:hover { transform: scale(1.02); }
+  
+  .highlight { background: rgba(251,191,36,0.3); color: #fbbf24; padding: 1px 3px; border-radius: 3px; }
 </style>
 </head>
 <body class="h-screen flex flex-col">
 
-  <!-- LOGIN VIEW -->
-  <div id="loginView" class="h-screen flex items-center justify-center relative">
+  <!-- ============ LOGIN VIEW ============ -->
+  <div id="loginView" class="h-screen flex items-center justify-center relative overflow-hidden">
     <div class="absolute inset-0 opacity-5" style="background-image: radial-gradient(#888 1px, transparent 1px); background-size: 20px 20px;"></div>
+    
     <div class="relative w-full max-w-md mx-4">
       <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-green-500 mb-3">
-          <i class="fas fa-comments text-2xl text-black"></i>
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-green-500 mb-4 shadow-lg shadow-green-500/20">
+          <i class="fas fa-comments text-3xl text-black"></i>
         </div>
-        <h1 class="text-2xl font-bold">NexusChat</h1>
-        <p class="text-sm text-gray-500">Sistem Komunikasi Internal</p>
+        <h1 class="text-3xl font-bold tracking-tight">NexusChat</h1>
+        <p class="text-sm text-gray-500 mt-1">Sistem Komunikasi Internal</p>
       </div>
-      <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-xl p-8 shadow-2xl">
+
+      <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-2xl p-8 shadow-2xl">
         <div id="ipDisplay" class="mb-4 text-xs text-gray-400 bg-[#18181b] p-3 rounded-lg border border-[#3f3f46] flex items-center gap-2">
           <i class="fas fa-network-wired text-green-500"></i>
           <span>Memuat IP Perangkat...</span>
         </div>
+
         <form id="loginForm" class="space-y-4">
           <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1.5">Username</label>
-            <input type="text" id="loginUsername" class="input-bg w-full px-4 py-2.5 rounded-lg text-white" placeholder="Masukkan username" required>
+            <label class="block text-xs font-medium text-gray-400 mb-1.5 uppercase">Username</label>
+            <input type="text" id="loginUsername" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Masukkan username" required>
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1.5">Password</label>
-            <input type="password" id="loginPassword" class="input-bg w-full px-4 py-2.5 rounded-lg text-white" placeholder="Masukkan password" required>
+            <label class="block text-xs font-medium text-gray-400 mb-1.5 uppercase">Password</label>
+            <input type="password" id="loginPassword" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Masukkan password" required>
           </div>
+          
           <div id="loginError" class="hidden text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-2">
             <i class="fas fa-exclamation-circle"></i>
             <span id="loginErrorMsg">Password salah!</span>
           </div>
-          <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-black font-bold py-2.5 rounded-lg transition flex items-center justify-center gap-2">
+
+          <button type="submit" class="btn-primary w-full py-3 rounded-lg flex items-center justify-center gap-2">
             <i class="fas fa-sign-in-alt"></i> Masuk
           </button>
         </form>
+        
         <div class="mt-4 text-xs text-gray-600 text-center border-t border-[#3f3f46] pt-4">
-          <p>Demo Admin: <span class="text-gray-400 font-mono">admin / admin</span></p>
+          <p>Hubungi Admin untuk pendaftaran akun & IP</p>
+          <p class="mt-1 text-gray-700">Demo Admin: <span class="text-gray-400 font-mono">admin / admin</span></p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- DASHBOARD VIEW -->
+  <!-- ============ DASHBOARD VIEW ============ -->
   <div id="dashboardView" class="hidden h-screen flex flex-col">
-    <header class="bg-[#1f1f23] border-b border-[#3f3f46] px-4 py-2 flex items-center justify-between z-20">
+    
+    <!-- Header -->
+    <header class="bg-[#1f1f23] border-b border-[#3f3f46] px-4 py-2 flex items-center justify-between flex-shrink-0 z-20">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
           <i class="fas fa-comments text-black text-sm"></i>
         </div>
-        <span class="font-bold">NexusChat</span>
+        <span class="font-bold text-sm">NexusChat</span>
       </div>
+      
       <div class="flex-1 max-w-xs mx-4">
         <div class="relative">
           <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
-          <input type="text" id="globalSearch" class="input-bg w-full pl-8 pr-4 py-1.5 rounded-md text-xs text-white" placeholder="Cari chat... (Ctrl+F)">
+          <input type="text" id="globalSearch" class="input-style w-full pl-8 pr-4 py-1.5 rounded-md text-xs" placeholder="Cari riwayat chat... (Ctrl+F)">
         </div>
       </div>
+
       <div class="flex items-center gap-3">
-        <span class="text-xs text-gray-400">IP: <span id="userIpDisplay" class="font-mono text-green-400">-</span></span>
-        <div class="w-px h-6 bg-[#3f3f46]"></div>
+        <span class="text-xs text-gray-400 hidden sm:inline">IP: <span id="userIpDisplay" class="font-mono text-green-400">-</span></span>
+        <div class="w-px h-6 bg-[#3f3f46] hidden sm:block"></div>
         <div class="text-right">
           <div class="text-xs font-bold" id="userName">-</div>
           <div class="text-[10px] text-gray-500" id="userRole">-</div>
         </div>
-        <button id="logoutBtn" class="w-8 h-8 rounded-md hover:bg-red-500/20 text-gray-400 hover:text-red-400 flex items-center justify-center">
+        <img id="userAvatarHeader" class="avatar-sm cursor-pointer hover:opacity-80" src="https://via.placeholder.com/40x40/27272a/fff?text=U" onclick="openProfileModal()" title="Ganti Foto Profil">
+        <button id="logoutBtn" class="w-8 h-8 rounded-md hover:bg-red-500/20 text-gray-400 hover:text-red-400 flex items-center justify-center" title="Keluar">
           <i class="fas fa-sign-out-alt text-xs"></i>
         </button>
       </div>
     </header>
 
     <div class="flex-1 flex overflow-hidden">
-      <aside class="w-60 bg-[#1f1f23] border-r border-[#3f3f46] flex flex-col flex-shrink-0">
+      
+      <!-- Sidebar Groups -->
+      <aside class="w-64 bg-[#1f1f23] border-r border-[#3f3f46] flex flex-col flex-shrink-0">
         <div class="p-3 border-b border-[#3f3f46] flex items-center justify-between">
           <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Groups</span>
           <button id="adminAddGroupBtn" class="hidden text-green-400 hover:text-white text-xs" title="Buat Group Baru">
@@ -102,43 +143,70 @@
           </button>
         </div>
         <div id="groupList" class="flex-1 overflow-y-auto py-2"></div>
-        <div id="adminPanel" class="hidden p-3 border-t border-[#3f3f46]">
+        
+        <div id="adminPanel" class="hidden p-3 border-t border-[#3f3f46] space-y-2">
           <button id="adminManageUsersBtn" class="w-full text-xs text-left text-gray-400 hover:text-white bg-[#27272a] hover:bg-[#3f3f46] py-2 px-3 rounded-md flex items-center gap-2">
             <i class="fas fa-users-cog"></i> Kelola User & IP
           </button>
         </div>
       </aside>
 
+      <!-- Main Chat Area -->
       <main class="flex-1 flex flex-col min-w-0 relative">
         <div id="chatHeader" class="bg-[#1f1f23] border-b border-[#3f3f46] px-6 py-3 flex items-center justify-between flex-shrink-0">
-          <div>
-            <h2 id="activeGroupName" class="font-bold text-sm">Pilih Group</h2>
-            <p id="activeGroupDesc" class="text-xs text-gray-500">-</p>
-          </div>
+          <!-- Isi dinamis -->
         </div>
+
         <div id="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4 bg-[#18181b]"></div>
+
+        <!-- Input Area -->
         <div class="bg-[#1f1f23] border-t border-[#3f3f46] p-4 flex-shrink-0">
           <form id="messageForm" class="flex items-center gap-2">
-            <input type="text" id="messageInput" class="input-bg flex-1 px-4 py-2.5 rounded-lg text-sm text-white" placeholder="Ketik pesan..." disabled>
-            <button type="submit" id="sendBtn" class="bg-green-500 hover:bg-green-600 text-black font-bold px-4 py-2.5 rounded-lg text-sm" disabled>
+            <button type="button" id="uploadImgBtn" class="w-10 h-10 rounded-lg bg-[#27272a] hover:bg-[#3f3f46] text-gray-400 hover:text-white flex items-center justify-center flex-shrink-0" title="Kirim Gambar">
+              <i class="fas fa-image"></i>
+            </button>
+            <input type="file" id="imageInput" class="hidden" accept="image/*">
+            <input type="text" id="messageInput" class="input-style flex-1 px-4 py-2.5 rounded-lg text-sm" placeholder="Ketik pesan..." disabled>
+            <button type="submit" id="sendBtn" class="btn-primary px-4 py-2.5 rounded-lg text-sm flex-shrink-0" disabled>
               <i class="fas fa-paper-plane"></i>
             </button>
           </form>
         </div>
-        <div id="notifBar" class="absolute bottom-20 left-1/2 -translate-x-1/2 hidden bg-[#27272a] border border-green-500 rounded-full shadow-2xl px-5 py-2.5 flex items-center gap-3 cursor-pointer z-10" onclick="handleNotifClick()">
+
+        <!-- Notification Bottom Bar -->
+        <div id="notifBar" class="notif-bar absolute bottom-20 left-1/2 -translate-x-1/2 hidden bg-[#27272a] border border-green-500 rounded-full shadow-2xl px-5 py-2.5 flex items-center gap-3 cursor-pointer z-10" onclick="handleNotifClick()">
           <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
           <span id="notifText" class="text-xs font-medium text-white"></span>
           <i class="fas fa-chevron-right text-xs text-gray-400"></i>
         </div>
       </main>
+
     </div>
   </div>
 
-  <!-- MODAL ADMIN -->
-  <div id="manageUsersModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+  <!-- ============ MODAL: PROFILE ============ -->
+  <div id="profileModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
+    <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-xl w-full max-w-md p-6 text-center">
+      <h3 class="font-bold text-lg mb-4">Foto Profil</h3>
+      <img id="profilePreview" class="avatar-lg mx-auto mb-4" src="">
+      <input type="file" id="profileInput" class="hidden" accept="image/*">
+      <div class="flex gap-2 justify-center mb-4">
+        <button onclick="document.getElementById('profileInput').click()" class="btn-secondary px-4 py-2 rounded-lg text-sm">
+          <i class="fas fa-upload mr-1"></i> Pilih Foto
+        </button>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="closeModal('profileModal')" class="btn-secondary w-full py-2 rounded-lg text-sm">Batal</button>
+        <button onclick="saveProfilePic()" class="btn-primary w-full py-2 rounded-lg text-sm">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: MANAGE USERS (ADMIN) ============ -->
+  <div id="manageUsersModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
+    <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
       <div class="p-4 border-b border-[#3f3f46] flex items-center justify-between">
-        <h3 class="font-bold">Kelola User, IP & Akses Group</h3>
+        <h3 class="font-bold">Kelola User, IP & Jabatan</h3>
         <button onclick="closeModal('manageUsersModal')" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
       </div>
       <div class="p-4 overflow-y-auto">
@@ -146,38 +214,81 @@
           <div class="bg-[#18181b] p-4 rounded-lg border border-[#3f3f46]">
             <h4 class="text-xs font-bold uppercase mb-3 text-gray-400">Daftar User Baru</h4>
             <div class="space-y-3">
-              <input type="text" id="newUserName" class="input-bg w-full px-3 py-2 rounded text-xs text-white" placeholder="Nama Lengkap">
-              <input type="text" id="newUserUsername" class="input-bg w-full px-3 py-2 rounded text-xs text-white" placeholder="Username Login">
-              <input type="password" id="newUserPassword" class="input-bg w-full px-3 py-2 rounded text-xs text-white" placeholder="Password">
-              <input type="text" id="newUserIp" class="input-bg w-full px-3 py-2 rounded text-xs text-white" placeholder="IP Perangkat (cth: 123.45.67.89)" title="Isi 'any' jika bebas IP">
-              <button onclick="adminAddUser()" class="bg-green-500 hover:bg-green-600 text-black font-bold w-full py-2 rounded text-xs">Tambah User</button>
+              <input type="text" id="newUserName" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Nama Lengkap">
+              <input type="text" id="newUserUsername" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Username Login">
+              <input type="password" id="newUserPassword" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Password">
+              <select id="newUserRole" class="input-style w-full px-3 py-2 rounded text-xs">
+                <option value="member">Member</option>
+                <option value="leader">Leader</option>
+              </select>
+              <input type="text" id="newUserIp" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="IP Perangkat (cth: 123.45.67.89)">
+              <button onclick="adminAddUser()" class="btn-primary w-full py-2 rounded text-xs">Tambah User</button>
             </div>
           </div>
+          
           <div class="bg-[#18181b] p-4 rounded-lg border border-[#3f3f46]">
             <h4 class="text-xs font-bold uppercase mb-3 text-gray-400">Buat Group Baru</h4>
             <div class="space-y-3">
-              <input type="text" id="newGroupName" class="input-bg w-full px-3 py-2 rounded text-xs text-white" placeholder="Nama Group (cth: CS Team)">
-              <textarea id="newGroupDesc" class="input-bg w-full px-3 py-2 rounded text-xs text-white" rows="2" placeholder="Deskripsi Group"></textarea>
-              <button onclick="adminAddGroup()" class="bg-green-500 hover:bg-green-600 text-black font-bold w-full py-2 rounded text-xs">Buat Group</button>
+              <input type="text" id="newGroupName" class="input-style w-full px-3 py-2 rounded text-xs" placeholder="Nama Group (cth: CS Team)">
+              <textarea id="newGroupDesc" class="input-style w-full px-3 py-2 rounded text-xs" rows="2" placeholder="Deskripsi Group"></textarea>
+              <select id="newGroupLeader" class="input-style w-full px-3 py-2 rounded text-xs">
+                <option value="">Pilih Leader...</option>
+              </select>
+              <button onclick="adminAddGroup()" class="btn-primary w-full py-2 rounded text-xs">Buat Group</button>
             </div>
           </div>
         </div>
+
         <div class="mt-6">
-          <h4 class="text-xs font-bold uppercase mb-3 text-gray-400">Daftar User & Akses</h4>
+          <h4 class="text-xs font-bold uppercase mb-3 text-gray-400">Daftar User</h4>
           <div id="adminUserList" class="space-y-2 max-h-40 overflow-y-auto"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <div id="manageAccessModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-xl w-full max-w-md p-5">
-      <h3 class="font-bold mb-2">Atur Akses: <span id="accessUserName" class="text-green-400"></span></h3>
-      <p class="text-xs text-gray-500 mb-4">Centang group yang boleh diakses user ini.</p>
-      <div id="accessGroupCheckboxes" class="space-y-2 max-h-60 overflow-y-auto"></div>
-      <button onclick="closeModal('manageAccessModal')" class="mt-4 w-full bg-[#3f3f46] hover:bg-[#52525b] py-2 rounded text-xs">Tutup</button>
+  <!-- ============ MODAL: MANAGE GROUP (LEADER/ADMIN) ============ -->
+  <div id="manageGroupModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
+    <div class="bg-[#1f1f23] border border-[#3f3f46] rounded-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+      <div class="p-4 border-b border-[#3f3f46] flex items-center justify-between">
+        <h3 class="font-bold">Edit Group: <span id="editGroupNameTitle" class="text-green-400"></span></h3>
+        <button onclick="closeModal('manageGroupModal')" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-4 overflow-y-auto">
+        <div class="flex flex-col items-center mb-4">
+          <img id="groupLogoPreview" class="logo-md mb-2" src="https://via.placeholder.com/40x40/27272a/fff?text=G">
+          <input type="file" id="groupLogoInput" class="hidden" accept="image/*">
+          <button onclick="document.getElementById('groupLogoInput').click()" class="text-xs text-green-400 hover:text-green-300">
+            <i class="fas fa-edit mr-1"></i> Ganti Logo Group
+          </button>
+        </div>
+        
+        <div class="space-y-3 mb-4">
+          <input type="text" id="editGroupName" class="input-style w-full px-3 py-2 rounded text-sm" placeholder="Nama Group">
+          <textarea id="editGroupDesc" class="input-style w-full px-3 py-2 rounded text-sm" rows="2" placeholder="Deskripsi"></textarea>
+        </div>
+
+        <h4 class="text-xs font-bold uppercase mb-2 text-gray-400">Anggota Group</h4>
+        <div id="groupMembersList" class="space-y-2 max-h-40 overflow-y-auto bg-[#18181b] p-3 rounded-lg border border-[#3f3f46]"></div>
+        
+        <h4 class="text-xs font-bold uppercase mt-4 mb-2 text-gray-400">Tambah Anggota</h4>
+        <div class="flex gap-2">
+          <select id="addMemberSelect" class="input-style flex-1 px-3 py-2 rounded text-sm"></select>
+          <button onclick="leaderAddMember()" class="btn-primary px-4 py-2 rounded text-sm">Tambah</button>
+        </div>
+
+        <button onclick="saveGroupChanges()" class="btn-primary w-full py-2 rounded-lg mt-6">Simpan Perubahan</button>
+      </div>
     </div>
   </div>
+
+  <!-- Image Viewer Modal -->
+  <div id="imageViewerModal" class="hidden fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-8 cursor-pointer" onclick="closeModal('imageViewerModal')">
+    <img id="imageViewerSrc" class="max-w-full max-h-full object-contain rounded-lg" src="">
+  </div>
+
+  <!-- Toast -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
 let currentIP = 'Memuat...';
@@ -189,16 +300,17 @@ fetch('https://api.ipify.org?format=json')
   })
   .catch(() => { currentIP = 'Unknown'; document.getElementById('ipDisplay').innerHTML = `<i class="fas fa-network-wired text-red-500"></i> <span>Gagal deteksi IP</span>`; });
 
+// ===== DATABASE =====
 const DB = {
   init() {
     if (!localStorage.getItem('nc_users')) {
-      const admin = [{ id: 1, name: 'Administrator', username: 'admin', password: 'admin', ip: 'any', role: 'admin', groupAccess: [] }];
+      const admin = [{ id: 1, name: 'Administrator', username: 'admin', password: 'admin', ip: 'any', role: 'admin', groupAccess: [], avatar: '' }];
       localStorage.setItem('nc_users', JSON.stringify(admin));
     }
     if (!localStorage.getItem('nc_groups')) {
       const groups = [
-        { id: 'g1', name: 'DISKUSI UMUM', desc: 'Group untuk semua karyawan' },
-        { id: 'g2', name: 'KENDALA SISTEM', desc: 'Lapor kendala sistem' }
+        { id: 'g1', name: 'DISKUSI UMUM', desc: 'Group untuk semua karyawan', logo: '', leaderId: 1 },
+        { id: 'g2', name: 'KENDALA SISTEM', desc: 'Lapor kendala sistem', logo: '', leaderId: 1 }
       ];
       localStorage.setItem('nc_groups', JSON.stringify(groups));
       const users = this.getUsers();
@@ -206,7 +318,7 @@ const DB = {
       this.saveUsers(users);
     }
     if (!localStorage.getItem('nc_messages')) {
-      localStorage.setItem('nc_messages', JSON.stringify([{ id: 'm1', groupId: 'g1', userId: 0, name: 'System', content: 'Selamat datang di NexusChat.', timestamp: Date.now() - 3600000 }]));
+      localStorage.setItem('nc_messages', JSON.stringify([{ id: 'm1', groupId: 'g1', userId: 0, name: 'System', avatar: '', content: 'Selamat datang di NexusChat.', timestamp: Date.now() - 3600000, type: 'text' }]));
     }
     if (!localStorage.getItem('nc_lastread')) localStorage.setItem('nc_lastread', JSON.stringify({}));
   },
@@ -218,7 +330,7 @@ const DB = {
   addMessage(msg) {
     const msgs = this.getMessages();
     msgs.push(msg);
-    if (msgs.length > 10000) msgs.shift();
+    if (msgs.length > 5000) msgs.shift(); // limit 5000 pesan
     localStorage.setItem('nc_messages', JSON.stringify(msgs));
   },
   getLastRead() { return JSON.parse(localStorage.getItem('nc_lastread') || '{}'); },
@@ -229,19 +341,46 @@ const DB = {
   }
 };
 
+// ===== UTILS =====
 function showToast(msg, type='info') {
   const c = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
   const t = document.createElement('div');
-  t.className = `${c} text-white text-xs px-4 py-2 rounded-lg shadow-xl fixed top-4 right-4 z-50 flex items-center gap-2`;
+  t.className = `${c} text-white text-xs px-4 py-2 rounded-lg shadow-xl flex items-center gap-2`;
   t.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${msg}`;
-  document.body.appendChild(t);
+  document.getElementById('toastContainer').appendChild(t);
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
 }
 
 function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 function formatTime(ts) { return new Date(ts).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }); }
 
-// AUTH
+// Compress image to Base64
+function compressImage(file, maxSize, callback) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      let canvas = document.createElement('canvas');
+      let width = img.width, height = img.height;
+      
+      if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } }
+      else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
+      
+      canvas.width = width; canvas.height = height;
+      let ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      callback(canvas.toDataURL('image/jpeg', 0.7));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function viewImage(src) { document.getElementById('imageViewerSrc').src = src; openModal('imageViewerModal'); }
+
+// ===== AUTH =====
 document.getElementById('loginForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const u = document.getElementById('loginUsername').value.trim();
@@ -250,18 +389,10 @@ document.getElementById('loginForm').addEventListener('submit', (e) => {
   const errMsg = document.getElementById('loginErrorMsg');
   
   const user = DB.getUsers().find(x => x.username === u);
-  if (!user) {
-    errMsg.textContent = 'Username tidak ditemukan. Hubungi Admin.';
-    errBox.classList.remove('hidden'); return;
-  }
-  if (user.ip !== 'any' && user.ip !== currentIP) {
-    errMsg.textContent = `Akses ditolak! IP Anda (${currentIP}) tidak terdaftar. IP terdaftar: ${user.ip}`;
-    errBox.classList.remove('hidden'); return;
-  }
-  if (user.password !== p) {
-    errMsg.textContent = 'Password salah! Silakan coba lagi.';
-    errBox.classList.remove('hidden'); return;
-  }
+  if (!user) { errMsg.textContent = 'Username tidak ditemukan. Hubungi Admin.'; errBox.classList.remove('hidden'); return; }
+  if (user.ip !== 'any' && user.ip !== currentIP) { errMsg.textContent = `Akses ditolak! IP Anda (${currentIP}) tidak terdaftar.`; errBox.classList.remove('hidden'); return; }
+  if (user.password !== p) { errMsg.textContent = 'Password salah! Silakan coba lagi.'; errBox.classList.remove('hidden'); return; }
+  
   errBox.classList.add('hidden');
   sessionStorage.setItem('nc_session', user.id);
   showDashboard();
@@ -271,22 +402,51 @@ function showDashboard() {
   document.getElementById('loginView').classList.add('hidden');
   document.getElementById('dashboardView').classList.remove('hidden');
   const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
+  
   document.getElementById('userName').textContent = user.name;
   document.getElementById('userRole').textContent = user.role.toUpperCase();
   document.getElementById('userIpDisplay').textContent = currentIP;
+  document.getElementById('userAvatarHeader').src = user.avatar || `https://via.placeholder.com/40x40/27272a/fff?text=${user.name.charAt(0).toUpperCase()}`;
+  
   if (user.role === 'admin') {
     document.getElementById('adminAddGroupBtn').classList.remove('hidden');
     document.getElementById('adminPanel').classList.remove('hidden');
   }
+  
   renderGroups();
   startNotifCheck();
 }
 
 document.getElementById('logoutBtn').addEventListener('click', () => { sessionStorage.removeItem('nc_session'); location.reload(); });
 
-// GROUPS & CHAT
+// ===== PROFILE =====
+function openProfileModal() {
+  const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
+  document.getElementById('profilePreview').src = user.avatar || `https://via.placeholder.com/80x80/27272a/fff?text=${user.name.charAt(0).toUpperCase()}`;
+  openModal('profileModal');
+}
+
+document.getElementById('profileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  compressImage(file, 200, (src) => { document.getElementById('profilePreview').src = src; });
+});
+
+function saveProfilePic() {
+  const src = document.getElementById('profilePreview').src;
+  const users = DB.getUsers();
+  const user = users.find(u => u.id == sessionStorage.getItem('nc_session'));
+  user.avatar = src;
+  DB.saveUsers(users);
+  document.getElementById('userAvatarHeader').src = src;
+  closeModal('profileModal');
+  showToast('Foto profil diperbarui', 'success');
+}
+
+// ===== GROUPS & CHAT =====
 let activeGroupId = null;
 let isSearchMode = false;
+let tempGroupLogo = '';
 
 function renderGroups() {
   const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
@@ -296,13 +456,19 @@ function renderGroups() {
   
   list.innerHTML = myGroups.map(g => {
     const unread = getUnreadCount(g.id, user.id);
+    const leader = DB.getUsers().find(u => u.id === g.leaderId);
+    const isLeader = user.id === g.leaderId || user.role === 'admin';
     return `
-      <div class="group-item ${activeGroupId === g.id ? 'active' : ''} px-4 py-3 cursor-pointer" onclick="selectGroup('${g.id}')">
-        <div class="flex items-center justify-between">
-          <span class="text-sm font-medium text-gray-200 truncate flex-1"># ${g.name}</span>
-          ${unread > 0 ? `<span class="bg-green-500 text-black font-bold text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 ml-2">${unread}</span>` : ''}
+      <div class="group-item ${activeGroupId === g.id ? 'active' : ''} px-3 py-2 cursor-pointer flex items-center gap-2" onclick="selectGroup('${g.id}')">
+        <img src="${g.logo || `https://via.placeholder.com/32x32/27272a/fff?text=${g.name.charAt(0)}`}" class="w-8 h-8 rounded-lg object-cover flex-shrink-0">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-200 truncate">${g.name}</span>
+            ${unread > 0 ? `<span class="bg-green-500 text-black font-bold text-[10px] min-w-[16px] h-[16px] rounded-full flex items-center justify-center px-1 ml-2">${unread}</span>` : ''}
+          </div>
+          <div class="text-[10px] text-gray-500 truncate">${leader ? 'Lead: ' + leader.name : g.desc}</div>
         </div>
-        <div class="text-[10px] text-gray-500 truncate mt-0.5">${g.desc}</div>
+        ${isLeader ? `<i class="fas fa-cog text-gray-500 hover:text-white text-xs" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')"></i>` : ''}
       </div>`;
   }).join('');
 }
@@ -319,9 +485,26 @@ function selectGroup(id) {
   DB.setLastRead(id, user.id, Date.now());
   document.getElementById('messageInput').disabled = false;
   document.getElementById('sendBtn').disabled = false;
-  document.getElementById('chatHeader').innerHTML = `<div><h2 class="font-bold text-sm">${DB.getGroups().find(g=>g.id===id).name}</h2><p class="text-xs text-gray-500">${DB.getGroups().find(g=>g.id===id).desc}</p></div>`;
+  document.getElementById('uploadImgBtn').disabled = false;
   renderGroups();
   renderMessages();
+  updateChatHeader();
+}
+
+function updateChatHeader() {
+  const g = DB.getGroups().find(x => x.id === activeGroupId);
+  const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
+  const isLeader = user.id === g.leaderId || user.role === 'admin';
+  document.getElementById('chatHeader').innerHTML = `
+    <div class="flex items-center gap-3">
+      <img src="${g.logo || `https://via.placeholder.com/40x40/27272a/fff?text=${g.name.charAt(0)}`}" class="logo-md">
+      <div>
+        <h2 class="font-bold text-sm">${g.name}</h2>
+        <p class="text-xs text-gray-500">${g.desc}</p>
+      </div>
+    </div>
+    ${isLeader ? `<button onclick="openManageGroupModal('${g.id}')" class="btn-secondary px-3 py-1.5 rounded-md text-xs"><i class="fas fa-cog mr-1"></i> Kelola Group</button>` : ''}
+  `;
 }
 
 function renderMessages(searchTerm = '') {
@@ -331,7 +514,7 @@ function renderMessages(searchTerm = '') {
   
   if (searchTerm) {
     const term = searchTerm.toLowerCase();
-    msgs = msgs.filter(m => m.content.toLowerCase().includes(term) || m.name.toLowerCase().includes(term));
+    msgs = msgs.filter(m => (m.content && m.content.toLowerCase().includes(term)) || m.name.toLowerCase().includes(term));
   }
   
   let html = '';
@@ -350,15 +533,19 @@ function renderMessages(searchTerm = '') {
       if (msg.name === 'System') {
         html += `<div class="text-center my-2"><span class="text-[10px] text-gray-500 bg-[#27272a] px-3 py-1 rounded-full">${msg.content}</span></div>`;
       } else {
+        const avatar = msg.avatar || `https://via.placeholder.com/36x36/27272a/fff?text=${msg.name.charAt(0).toUpperCase()}`;
         html += `
           <div class="msg-in flex gap-3 mb-4 ${isSelf ? 'flex-row-reverse' : ''}">
-            <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-black font-bold text-xs flex-shrink-0">${msg.name.charAt(0)}</div>
+            <img src="${avatar}" class="avatar-sm flex-shrink-0">
             <div class="max-w-[60%]">
               <div class="flex items-center gap-2 ${isSelf ? 'justify-end' : ''}">
-                <span class="text-xs font-bold ${isSelf ? 'text-green-400' : 'text-white'}">${escapeHtml(msg.name)}</span>
+                <span class="text-xs font-bold ${isSelf ? 'text-green-400' : 'text-white'}">${msg.name}</span>
                 <span class="text-[10px] text-gray-500">${formatTime(msg.timestamp)}</span>
               </div>
-              <div class="mt-1 bg-[#27272a] px-3 py-2 rounded-lg text-sm inline-block break-words" style="border-top-left-radius: 0;">${escapeHtml(msg.content)}</div>
+              ${msg.type === 'image' ? 
+                `<img src="${msg.content}" class="chat-img mt-1" onclick="viewImage('${msg.content}')">` :
+                `<div class="mt-1 bg-[#27272a] px-3 py-2 rounded-lg text-sm inline-block break-words" style="border-top-left-radius: 0;">${escapeHtml(msg.content)}</div>`
+              }
             </div>
           </div>`;
       }
@@ -370,7 +557,7 @@ function renderMessages(searchTerm = '') {
   if (searchTerm) {
     const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     container.querySelectorAll('.break-words').forEach(el => {
-      el.innerHTML = el.innerHTML.replace(regex, '<span style="background: rgba(251,191,36,0.3); color: #fbbf24; padding: 1px 3px; border-radius: 3px;">$1</span>');
+      el.innerHTML = el.innerHTML.replace(regex, '<span class="highlight">$1</span>');
     });
   }
 }
@@ -380,12 +567,27 @@ document.getElementById('messageForm').addEventListener('submit', (e) => {
   const input = document.getElementById('messageInput');
   if (!input.value.trim() || !activeGroupId) return;
   const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
-  DB.addMessage({ id: 'm_' + Date.now(), groupId: activeGroupId, userId: user.id, name: user.name, content: input.value.trim(), timestamp: Date.now() });
+  DB.addMessage({ id: 'm_' + Date.now(), groupId: activeGroupId, userId: user.id, name: user.name, avatar: user.avatar, content: input.value.trim(), timestamp: Date.now(), type: 'text' });
   input.value = '';
   renderMessages();
   renderGroups();
 });
 
+// Image Upload Chat
+document.getElementById('uploadImgBtn').addEventListener('click', () => document.getElementById('imageInput').click());
+document.getElementById('imageInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file || !activeGroupId) return;
+  compressImage(file, 800, (src) => {
+    const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
+    DB.addMessage({ id: 'm_' + Date.now(), groupId: activeGroupId, userId: user.id, name: user.name, avatar: user.avatar, content: src, timestamp: Date.now(), type: 'image' });
+    renderMessages();
+    renderGroups();
+  });
+  e.target.value = '';
+});
+
+// ===== SEARCH =====
 document.getElementById('globalSearch').addEventListener('input', (e) => {
   const val = e.target.value.trim();
   isSearchMode = val.length > 0;
@@ -399,7 +601,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// NOTIFIKASI BAWAH
+// ===== NOTIF =====
 function startNotifCheck() {
   setInterval(() => {
     const user = DB.getUsers().find(u => u.id == sessionStorage.getItem('nc_session'));
@@ -414,16 +616,14 @@ function startNotifCheck() {
       const newMsgs = msgs.filter(m => m.timestamp > lastRead);
       if (newMsgs.length > 0) {
         const lastMsg = newMsgs[newMsgs.length - 1];
-        if (!latestMsg || lastMsg.timestamp > latestMsg.timestamp) {
-          latestMsg = lastMsg; latestGroupId = g.id;
-        }
+        if (!latestMsg || lastMsg.timestamp > latestMsg.timestamp) { latestMsg = lastMsg; latestGroupId = g.id; }
       }
     });
     
     const notifBar = document.getElementById('notifBar');
     if (latestMsg) {
       const group = DB.getGroups().find(g => g.id === latestGroupId);
-      document.getElementById('notifText').textContent = `Pesan baru di ${group.name} dari ${latestMsg.name}: "${latestMsg.content.substring(0, 40)}..."`;
+      document.getElementById('notifText').textContent = `Pesan baru di ${group.name} dari ${latestMsg.name}`;
       notifBar.classList.remove('hidden');
       notifBar.dataset.targetGroup = latestGroupId;
     } else {
@@ -439,20 +639,32 @@ function handleNotifClick() {
   document.getElementById('notifBar').classList.add('hidden');
 }
 
-// ADMIN
-function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+// ===== ADMIN FUNCTIONS =====
+document.getElementById('adminAddGroupBtn').addEventListener('click', () => { renderAdminUserList(); populateLeaderSelect(); openModal('manageUsersModal'); });
+document.getElementById('adminManageUsersBtn').addEventListener('click', () => { renderAdminUserList(); populateLeaderSelect(); openModal('manageUsersModal'); });
 
-document.getElementById('adminAddGroupBtn').addEventListener('click', () => openModal('manageUsersModal'));
-document.getElementById('adminManageUsersBtn').addEventListener('click', () => { renderAdminUserList(); openModal('manageUsersModal'); });
+function populateLeaderSelect() {
+  const leaders = DB.getUsers().filter(u => u.role === 'leader' || u.role === 'admin');
+  document.getElementById('newGroupLeader').innerHTML = '<option value="">Pilih Leader...</option>' + leaders.map(l => `<option value="${l.id}">${l.name} (${l.role})</option>`).join('');
+}
 
 function adminAddGroup() {
   const name = document.getElementById('newGroupName').value.trim();
   const desc = document.getElementById('newGroupDesc').value.trim();
-  if (!name) return showToast('Nama group wajib diisi', 'error');
+  const leaderId = document.getElementById('newGroupLeader').value;
+  if (!name || !leaderId) return showToast('Nama group dan Leader wajib diisi', 'error');
+  
   const groups = DB.getGroups();
-  groups.push({ id: 'g_' + Date.now(), name: name.toUpperCase(), desc: desc || '-' });
+  const newG = { id: 'g_' + Date.now(), name: name.toUpperCase(), desc: desc || '-', logo: '', leaderId: parseInt(leaderId) };
+  groups.push(newG);
   DB.saveGroups(groups);
+  
+  // Beri akses leader ke group ini
+  const users = DB.getUsers();
+  const leader = users.find(u => u.id === parseInt(leaderId));
+  if (leader && !leader.groupAccess.includes(newG.id)) leader.groupAccess.push(newG.id);
+  DB.saveUsers(users);
+  
   document.getElementById('newGroupName').value = '';
   document.getElementById('newGroupDesc').value = '';
   renderGroups();
@@ -463,57 +675,122 @@ function adminAddUser() {
   const name = document.getElementById('newUserName').value.trim();
   const username = document.getElementById('newUserUsername').value.trim();
   const password = document.getElementById('newUserPassword').value.trim();
+  const role = document.getElementById('newUserRole').value;
   const ip = document.getElementById('newUserIp').value.trim();
   if (!name || !username || !password || !ip) return showToast('Semua field wajib diisi', 'error');
+  
   const users = DB.getUsers();
   if (users.find(u => u.username === username)) return showToast('Username sudah dipakai', 'error');
-  users.push({ id: Date.now(), name, username, password, ip, role: 'member', groupAccess: ['g1'] });
+  
+  users.push({ id: Date.now(), name, username, password, ip, role, groupAccess: ['g1'], avatar: '' });
   DB.saveUsers(users);
   document.getElementById('newUserName').value = '';
   document.getElementById('newUserUsername').value = '';
   document.getElementById('newUserPassword').value = '';
   document.getElementById('newUserIp').value = '';
   renderAdminUserList();
+  populateLeaderSelect();
   showToast('User berhasil ditambahkan', 'success');
 }
 
 function renderAdminUserList() {
-  const users = DB.getUsers();
   const list = document.getElementById('adminUserList');
-  list.innerHTML = users.filter(u => u.role !== 'admin').map(u => `
+  list.innerHTML = DB.getUsers().filter(u => u.role !== 'admin').map(u => `
     <div class="bg-[#18181b] p-3 rounded border border-[#3f3f46] flex items-center justify-between">
       <div>
         <div class="text-sm font-medium">${u.name} <span class="text-[10px] text-gray-500">(${u.username})</span></div>
-        <div class="text-[10px] text-gray-500">IP: ${u.ip} | Groups: ${u.groupAccess.length}</div>
+        <div class="text-[10px] text-gray-500">IP: ${u.ip} | Role: <span class="text-green-400 font-bold">${u.role}</span></div>
       </div>
-      <button onclick="openAccessModal(${u.id})" class="text-xs bg-[#3f3f46] hover:bg-[#52525b] px-3 py-1.5 rounded">Atur Akses</button>
-    </div>`).join('') || `<p class="text-xs text-gray-500 text-center py-4">Belum ada user</p>`;
+    </div>
+  `).join('') || `<p class="text-xs text-gray-500 text-center py-4">Belum ada user</p>`;
 }
 
-function openAccessModal(userId) {
-  const user = DB.getUsers().find(u => u.id === userId);
-  const groups = DB.getGroups();
-  document.getElementById('accessUserName').textContent = user.name;
-  const container = document.getElementById('accessGroupCheckboxes');
-  container.innerHTML = groups.map(g => `
-    <label class="flex items-center gap-2 p-2 hover:bg-[#18181b] rounded cursor-pointer">
-      <input type="checkbox" class="access-cb accent-green-500" value="${g.id}" ${user.groupAccess.includes(g.id) ? 'checked' : ''}>
-      <span class="text-sm">${g.name}</span>
-    </label>`).join('');
-  
-  container.querySelectorAll('.access-cb').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const users = DB.getUsers();
-      const u = users.find(x => x.id === userId);
-      if (cb.checked) { if (!u.groupAccess.includes(cb.value)) u.groupAccess.push(cb.value); }
-      else { u.groupAccess = u.groupAccess.filter(id => id !== cb.value); }
-      DB.saveUsers(users);
-      showToast('Akses diperbarui', 'success');
-    });
+// ===== LEADER FUNCTIONS =====
+let currentEditGroupId = null;
+
+function openManageGroupModal(id) {
+  currentEditGroupId = id;
+  const g = DB.getGroups().find(x => x.id === id);
+  tempGroupLogo = g.logo;
+  document.getElementById('editGroupNameTitle').textContent = g.name;
+  document.getElementById('editGroupName').value = g.name;
+  document.getElementById('editGroupDesc').value = g.desc;
+  document.getElementById('groupLogoPreview').src = g.logo || `https://via.placeholder.com/40x40/27272a/fff?text=${g.name.charAt(0)}`;
+  renderGroupMembers(id);
+  populateAddMemberSelect(id);
+  openModal('manageGroupModal');
+}
+
+document.getElementById('groupLogoInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  compressImage(file, 100, (src) => {
+    tempGroupLogo = src;
+    document.getElementById('groupLogoPreview').src = src;
   });
-  openModal('manageAccessModal');
+});
+
+function renderGroupMembers(id) {
+  const g = DB.getGroups().find(x => x.id === id);
+  const users = DB.getUsers();
+  const members = users.filter(u => u.role === 'admin' || u.groupAccess.includes(id));
+  document.getElementById('groupMembersList').innerHTML = members.map(u => `
+    <div class="flex items-center justify-between p-2 rounded hover:bg-[#27272a]">
+      <div class="flex items-center gap-2">
+        <img src="${u.avatar || `https://via.placeholder.com/28x28/27272a/fff?text=${u.name.charAt(0)}`}" class="avatar-xs">
+        <span class="text-sm">${u.name} ${u.id === g.leaderId ? '<span class="text-[10px] text-green-400">(Leader)</span>' : ''}</span>
+      </div>
+      ${u.id !== g.leaderId && u.role !== 'admin' ? `<button onclick="leaderRemoveMember(${u.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fas fa-times"></i></button>` : ''}
+    </div>
+  `).join('');
 }
 
+function populateAddMemberSelect(id) {
+  const users = DB.getUsers();
+  const nonMembers = users.filter(u => u.role !== 'admin' && !u.groupAccess.includes(id));
+  document.getElementById('addMemberSelect').innerHTML = nonMembers.length > 0 ? 
+    nonMembers.map(u => `<option value="${u.id}">${u.name} (${u.username})</option>`).join('') : 
+    `<option value="">Semua user sudah ada</option>`;
+}
+
+function leaderAddMember() {
+  const uid = parseInt(document.getElementById('addMemberSelect').value);
+  if (!uid || !currentEditGroupId) return;
+  const users = DB.getUsers();
+  const u = users.find(x => x.id === uid);
+  if (u && !u.groupAccess.includes(currentEditGroupId)) u.groupAccess.push(currentEditGroupId);
+  DB.saveUsers(users);
+  renderGroupMembers(currentEditGroupId);
+  populateAddMemberSelect(currentEditGroupId);
+  showToast('Anggota ditambahkan', 'success');
+}
+
+function leaderRemoveMember(uid) {
+  if (!currentEditGroupId) return;
+  const users = DB.getUsers();
+  const u = users.find(x => x.id === uid);
+  if (u) u.groupAccess = u.groupAccess.filter(id => id !== currentEditGroupId);
+  DB.saveUsers(users);
+  renderGroupMembers(currentEditGroupId);
+  populateAddMemberSelect(currentEditGroupId);
+  showToast('Anggota dikeluarkan', 'info');
+}
+
+function saveGroupChanges() {
+  if (!currentEditGroupId) return;
+  const groups = DB.getGroups();
+  const g = groups.find(x => x.id === currentEditGroupId);
+  g.name = document.getElementById('editGroupName').value.toUpperCase();
+  g.desc = document.getElementById('editGroupDesc').value;
+  g.logo = tempGroupLogo;
+  DB.saveGroups(groups);
+  closeModal('manageGroupModal');
+  renderGroups();
+  selectGroup(currentEditGroupId);
+  showToast('Group diperbarui', 'success');
+}
+
+// Init
 DB.init();
 if (sessionStorage.getItem('nc_session')) showDashboard();
 </script>
