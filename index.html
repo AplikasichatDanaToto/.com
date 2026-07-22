@@ -3,34 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NexusChat Enterprise</title>
+<title>Danatoto Chat</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
   * { font-family: 'Inter', sans-serif; }
-  body { background: #0f0f10; color: #e4e4e7; margin: 0; overflow: hidden; }
+  body { background: #0a0a0c; color: #e4e4e7; margin: 0; overflow: hidden; }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
   
-  .glass { background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(63, 63, 70, 0.5); }
-  .input-style { background: #18181b; border: 1px solid #27272a; color: #fff; transition: all 0.2s; }
-  .input-style:focus { border-color: #22c55e; outline: none; box-shadow: 0 0 0 3px rgba(34,197,94,0.15); }
+  /* EFEK GLOW & HIDUP */
+  .glass { background: rgba(20, 20, 23, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
+  .neon-border { box-shadow: 0 0 10px rgba(34, 197, 94, 0.3), 0 0 20px rgba(34, 197, 94, 0.1); }
+  
+  .input-style { background: #131316; border: 1px solid #27272a; color: #fff; transition: all 0.3s; }
+  .input-style:focus { border-color: #22c55e; outline: none; box-shadow: 0 0 0 4px rgba(34,197,94,0.1), 0 0 15px rgba(34,197,94,0.2); }
   
   .group-item { transition: all 0.2s; border-left: 3px solid transparent; }
-  .group-item:hover { background: #27272a; }
-  .group-item.active { background: linear-gradient(90deg, rgba(34,197,94,0.1) 0%, transparent 100%); border-left-color: #22c55e; }
+  .group-item:hover { background: rgba(255,255,255,0.03); }
+  .group-item.active { background: linear-gradient(90deg, rgba(34,197,94,0.15) 0%, transparent 100%); border-left-color: #22c55e; box-shadow: inset 0 0 20px rgba(34,197,94,0.05); }
   
-  @keyframes msgIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-  .msg-in { animation: msgIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes msgIn { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .msg-in { animation: msgIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
   
-  .modal-bg { background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); }
-  .btn-primary { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #000; font-weight: 600; transition: all 0.2s; box-shadow: 0 4px 15px rgba(34,197,94,0.2); }
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(34,197,94,0.3); }
+  @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 20px rgba(34,197,94,0.3), 0 0 40px rgba(34,197,94,0.1); } 50% { box-shadow: 0 0 30px rgba(34,197,94,0.5), 0 0 60px rgba(34,197,94,0.2); } }
+  .logo-glow { animation: glowPulse 3s infinite ease-in-out; }
+  
+  .modal-bg { background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
+  .btn-primary { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #000; font-weight: 700; transition: all 0.2s; box-shadow: 0 4px 15px rgba(34,197,94,0.2); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 25px rgba(34,197,94,0.4); }
   .btn-primary:disabled { background: #27272a; color: #52525b; box-shadow: none; transform: none; }
   .btn-secondary { background: #27272a; color: #fff; transition: all 0.2s; }
   .btn-secondary:hover { background: #3f3f46; }
+  .btn-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff; font-weight: 700; transition: all 0.2s; }
+  .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(239,68,68,0.3); }
 
   .msg-group { position: relative; }
   .reaction-picker { 
@@ -51,9 +59,10 @@
   .highlight { background: rgba(251,191,36,0.3); color: #fbbf24; padding: 1px 3px; border-radius: 3px; }
   
   .login-bg {
-    background: radial-gradient(circle at 50% 50%, rgba(34,197,94,0.1) 0%, transparent 60%),
+    background: radial-gradient(circle at 50% 50%, rgba(34,197,94,0.15) 0%, transparent 60%),
                 radial-gradient(circle at 80% 20%, rgba(59,130,246,0.1) 0%, transparent 50%),
-                #0f0f10;
+                radial-gradient(circle at 20% 80%, rgba(168,85,247,0.1) 0%, transparent 50%),
+                #0a0a0c;
   }
   .gif-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 4px; cursor: pointer; transition: transform 0.1s; }
   .gif-item img:hover { transform: scale(1.05); }
@@ -65,13 +74,11 @@
     <div class="absolute inset-0 opacity-5" style="background-image: radial-gradient(#888 1px, transparent 1px); background-size: 24px 24px;"></div>
     <div class="relative w-full max-w-md mx-4">
       <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-green-400 to-green-600 mb-4 shadow-xl shadow-green-500/30">
-          <i class="fas fa-comments text-4xl text-black"></i>
-        </div>
-        <h1 class="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">NexusChat</h1>
-        <p class="text-gray-500 text-sm mt-2">Enterprise Communication Platform</p>
+        <img src="https://lh3.googleusercontent.com/d/1JxvqFXKhF56O6ww8YTn-8iV3byNHvyu2" alt="Danatoto" class="w-28 h-28 rounded-2xl mx-auto mb-4 object-cover logo-glow">
+        <h1 class="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent">DANATOTO CHAT</h1>
+        <p class="text-gray-500 text-sm mt-2 tracking-widest uppercase">Enterprise Communication</p>
       </div>
-      <div class="glass rounded-2xl p-8 shadow-2xl">
+      <div class="glass rounded-2xl p-8 shadow-2xl neon-border">
         <form id="loginForm" class="space-y-4">
           <div>
             <label class="text-xs text-gray-400 ml-1 mb-1 block">Username</label>
@@ -84,7 +91,7 @@
           <div id="loginError" class="hidden text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-2">
             <i class="fas fa-exclamation-circle"></i><span id="loginErrorMsg">Password salah!</span>
           </div>
-          <button type="submit" id="loginBtn" class="btn-primary w-full py-3 rounded-lg flex items-center justify-center gap-2"><i class="fas fa-sign-in-alt"></i> Masuk</button>
+          <button type="submit" id="loginBtn" class="btn-primary w-full py-3 rounded-lg flex items-center justify-center gap-2"><i class="fas fa-sign-in-alt"></i> MASUK</button>
         </form>
         <div class="mt-6 text-xs text-gray-500 text-center border-t border-[#27272a] pt-4 flex items-center justify-center gap-2">
           <i class="fas fa-shield-alt text-green-500"></i> IP Anda: <span id="ipDisplay" class="text-green-400 font-mono font-bold">Memuat...</span>
@@ -96,8 +103,8 @@
   <div id="dashboardView" class="hidden h-screen flex flex-col">
     <header class="glass border-b border-[#27272a] px-4 py-2.5 flex items-center justify-between flex-shrink-0 z-20">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shadow-lg shadow-green-500/20"><i class="fas fa-comments text-black text-sm"></i></div>
-        <span class="font-bold text-sm tracking-wide hidden md:block">NexusChat</span>
+        <img src="https://lh3.googleusercontent.com/d/1JxvqFXKhF56O6ww8YTn-8iV3byNHvyu2" class="w-9 h-9 rounded-lg object-cover">
+        <span class="font-bold text-sm tracking-wide hidden md:block text-green-400">DANATOTO CHAT</span>
       </div>
       <div class="flex-1 max-w-xs mx-4 hidden md:block">
         <div class="relative">
@@ -122,6 +129,9 @@
           <button id="adminAddGroupBtn" class="hidden w-7 h-7 rounded-md bg-green-500/10 text-green-400 hover:bg-green-500/20 text-xs items-center justify-center"><i class="fas fa-plus"></i></button>
         </div>
         <div id="groupList" class="flex-1 overflow-y-auto py-2"></div>
+        <div class="p-3 border-t border-[#27272a]">
+          <img src="https://lh3.googleusercontent.com/d/1JxvqFXKhF56O6ww8YTn-8iV3byNHvyu2" class="w-full max-w-[120px] mx-auto opacity-80 mb-2 rounded-lg" alt="Danatoto">
+        </div>
         <div id="adminPanel" class="hidden p-3 border-t border-[#27272a]">
           <button id="adminManageUsersBtn" class="w-full text-xs text-left text-gray-400 hover:text-white bg-[#18181b] hover:bg-[#27272a] py-2.5 px-3 rounded-lg flex items-center gap-2 transition-all"><i class="fas fa-users-cog text-green-400"></i> Kelola User & Group</button>
         </div>
@@ -129,10 +139,10 @@
 
       <main class="flex-1 flex flex-col min-w-0 relative">
         <div id="chatHeader" class="glass border-b border-[#27272a] px-6 py-3 flex items-center justify-between flex-shrink-0"></div>
-        <div id="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4 bg-[#0f0f10]"></div>
+        <div id="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4 bg-[#0a0a0c]"></div>
         
         <div class="glass border-t border-[#27272a] p-4 flex-shrink-0 relative">
-           <div id="pickerDropdown" class="hidden absolute bottom-20 left-4 w-80 h-64 glass rounded-xl p-3 flex flex-col z-30 shadow-2xl">
+           <div id="pickerDropdown" class="hidden absolute bottom-20 left-4 w-80 h-64 glass rounded-xl p-3 flex flex-col z-30 shadow-2xl neon-border">
              <div class="flex gap-2 border-b border-[#27272a] pb-2 mb-2">
                 <button onclick="switchPicker('emoji')" id="tabEmoji" class="text-xs px-3 py-1 bg-green-500 text-black rounded-md font-bold">Emoji</button>
                 <button onclick="switchPicker('gif')" id="tabGif" class="text-xs px-3 py-1 bg-[#27272a] text-white rounded-md font-bold">GIF</button>
@@ -158,9 +168,9 @@
   </div>
 
   <div id="profileModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
-    <div class="glass rounded-2xl w-full max-w-md p-8 text-center">
+    <div class="glass rounded-2xl w-full max-w-md p-8 text-center neon-border">
       <h3 class="font-bold text-lg mb-6">Ubah Foto Profil</h3>
-      <img id="profilePreview" class="w-32 h-32 rounded-full mx-auto mb-6 object-cover ring-4 ring-[#27272a]" src="">
+      <img id="profilePreview" class="w-32 h-32 rounded-full mx-auto mb-6 object-cover ring-4 ring-green-500/30" src="">
       <input type="file" id="profileInput" class="hidden" accept="image/*">
       <button onclick="document.getElementById('profileInput').click()" class="btn-secondary px-4 py-2.5 rounded-lg text-sm mb-4 w-full"><i class="fas fa-upload mr-2"></i> Pilih Foto Baru</button>
       <div class="flex gap-2 mt-4">
@@ -171,14 +181,14 @@
   </div>
 
   <div id="manageUsersModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
-    <div class="glass rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+    <div class="glass rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col neon-border">
       <div class="p-5 border-b border-[#27272a] flex items-center justify-between">
         <h3 class="font-bold text-lg">Kelola User & Group</h3>
         <button onclick="closeModal('manageUsersModal')" class="text-gray-500 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#27272a]"><i class="fas fa-times"></i></button>
       </div>
       <div class="p-5 overflow-y-auto">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="bg-[#0f0f10] p-4 rounded-xl border border-[#27272a]">
+          <div class="bg-[#0a0a0c] p-4 rounded-xl border border-[#27272a]">
             <h4 class="text-xs font-bold uppercase mb-4 text-green-400 flex items-center gap-2"><i class="fas fa-user-plus"></i> Daftar User Baru</h4>
             <div class="space-y-3">
               <input type="text" id="newUserName" class="input-style w-full px-3 py-2.5 rounded-lg text-xs" placeholder="Nama Lengkap">
@@ -189,11 +199,11 @@
               <button onclick="adminAddUser()" class="btn-primary w-full py-2.5 rounded-lg text-xs">Tambah User</button>
             </div>
           </div>
-          <div class="bg-[#0f0f10] p-4 rounded-xl border border-[#27272a]">
+          <div class="bg-[#0a0a0c] p-4 rounded-xl border border-[#27272a]">
             <h4 class="text-xs font-bold uppercase mb-4 text-green-400 flex items-center gap-2"><i class="fas fa-plus-circle"></i> Buat Group Baru</h4>
             <div class="space-y-3">
               <div class="flex items-center gap-3">
-                <img id="newGroupLogoPreview" src="https://ui-avatars.com/api/?background=27272a&color=fff&name=G" class="w-14 h-14 rounded-xl object-cover cursor-pointer" onclick="document.getElementById('newGroupLogoInput').click()">
+                <img id="newGroupLogoPreview" src="https://ui-avatars.com/api/?background=27272a&color=fff&name=G" class="w-14 h-14 rounded-xl object-cover cursor-pointer">
                 <div class="flex-1">
                   <input type="text" id="newGroupName" class="input-style w-full px-3 py-2.5 rounded-lg text-xs mb-2" placeholder="Nama Group">
                   <input type="file" id="newGroupLogoInput" class="hidden" accept="image/*">
@@ -214,7 +224,7 @@
   </div>
 
   <div id="manageGroupModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
-    <div class="glass rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+    <div class="glass rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col neon-border">
       <div class="p-5 border-b border-[#27272a] flex items-center justify-between">
         <h3 class="font-bold text-lg">Edit Group: <span id="editGroupNameTitle" class="text-green-400"></span></h3>
         <button onclick="closeModal('manageGroupModal')" class="text-gray-500 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#27272a]"><i class="fas fa-times"></i></button>
@@ -229,8 +239,11 @@
           </div>
         </div>
         <h4 class="text-xs font-bold uppercase mb-2 text-gray-500">Centang User untuk Masuk Group</h4>
-        <div id="groupMembersList" class="space-y-1 max-h-48 overflow-y-auto bg-[#0f0f10] p-3 rounded-xl border border-[#27272a]"></div>
-        <button onclick="saveGroupChanges()" class="btn-primary w-full py-2.5 rounded-lg mt-6">Simpan Perubahan</button>
+        <div id="groupMembersList" class="space-y-1 max-h-48 overflow-y-auto bg-[#0a0a0c] p-3 rounded-xl border border-[#27272a]"></div>
+        <div class="flex gap-2 mt-6">
+          <button onclick="adminDeleteGroup()" class="btn-danger w-full py-2.5 rounded-lg text-sm"><i class="fas fa-trash mr-2"></i> Hapus Group</button>
+          <button onclick="saveGroupChanges()" class="btn-primary w-full py-2.5 rounded-lg text-sm">Simpan Perubahan</button>
+        </div>
       </div>
     </div>
   </div>
@@ -240,7 +253,7 @@
 
 <script>
 // PASTIKAN ANDA MENGGANTI URL INI DENGAN URL WEB APP ANDA
-const API_URL = 'https://script.google.com/macros/s/AKfycbzikqibsJWmieBBOlFGwRfncgmAWa2UmR6LjIm2v6QFqiLSUmA8D7QLJcsdrHb9agSA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycby3TVAZ_350S6dfV7ZFjO9uSmNYquHNVi-H4YZ0qgYlBqobpU8yKeb2etZMKGuKm406/exec';
 
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
@@ -318,7 +331,6 @@ document.getElementById('loginForm').addEventListener('submit', (e) => {
   const errBox = document.getElementById('loginError');
   const errMsg = document.getElementById('loginErrorMsg');
   
-  // Pakai data local/cache agar prosesnya instan tanpa nunggu server
   if (usersCache.length === 0 && u === 'admin' && p === 'admin') {
     usersCache.push({ id: '1', name: 'Administrator', username: 'admin', password: 'admin', ip: 'any', role: 'admin', groupAccess: [], avatar: '', pinnedGroups: [] });
     localStorage.setItem('nc_users', JSON.stringify(usersCache));
@@ -364,7 +376,16 @@ async function showDashboard() {
     const res = await fetch(`${API_URL}?action=getGroups`);
     const data = await res.json();
     if (Array.isArray(data) && data.length > 0) {
-      groupsCache = data;
+      // ANTI DOBEL: Filter ID unik
+      const uniqueGroups = [];
+      const groupIds = new Set();
+      data.forEach(g => {
+        if (!groupIds.has(g.id)) {
+          groupIds.add(g.id);
+          uniqueGroups.push(g);
+        }
+      });
+      groupsCache = uniqueGroups;
       localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
     } else {
       groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
@@ -727,7 +748,7 @@ function startNotifCheck() {
       prevMsgCount = messagesCache.length;
       renderMessages();
     }
-  }, 4000);
+  }, 4000); // Cek setiap 4 detik agar tidak ngelag
 }
 
 function handleNotifClick() {
@@ -760,8 +781,12 @@ async function adminAddGroup() {
   if (!name || !leaderId) return showToast('Nama group dan Leader wajib diisi', 'error');
   
   const newG = { id: 'g_' + Date.now(), name: name.toUpperCase(), desc: desc || '-', leaderId: leaderId, logo: currentGroupLogo };
-  groupsCache.push(newG);
-  localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
+  
+  // ANTI DOBEL: Cek di local cache dulu
+  if (!groupsCache.find(g => g.id === newG.id)) {
+    groupsCache.push(newG);
+    localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
+  }
   
   const leader = usersCache.find(u => u.id == leaderId);
   if (leader && !leader.groupAccess.includes(newG.id)) leader.groupAccess.push(newG.id);
@@ -802,7 +827,7 @@ async function adminAddUser() {
 
 function renderAdminUserList() {
   document.getElementById('adminUserList').innerHTML = usersCache.filter(u => u.role !== 'admin').map(u => `
-    <div class="bg-[#0f0f10] p-3 rounded-lg border border-[#27272a] flex items-center justify-between">
+    <div class="bg-[#0a0a0c] p-3 rounded-lg border border-[#27272a] flex items-center justify-between">
       <div>
         <div class="text-sm font-medium">${u.name}</div>
         <div class="text-[10px] text-gray-500">IP: ${u.ip} | Role: <span class="text-green-400 font-bold uppercase">${u.role}</span></div>
@@ -868,12 +893,44 @@ function saveGroupChanges() {
   closeModal('manageGroupModal');
   renderGroups();
   if (activeGroupId === currentEditGroupId) updateChatHeader();
-  // [PERBAIKAN] Update group ke server agar logo/nama tersimpan permanen
   apiPost({ action: 'updateGroup', id: g.id, name: g.name, desc: g.desc, logo: g.logo });
   showToast('Perubahan disimpan', 'success');
 }
 
-// Saat halaman di refresh, cek sesi login
+async function adminDeleteGroup() {
+  if (!currentEditGroupId) return;
+  if (!confirm('Yakin hapus group ini? Semua pesan di group ini akan tetap tersimpan tapi group hilang dari daftar.')) return;
+  
+  const gid = currentEditGroupId;
+  groupsCache = groupsCache.filter(g => g.id !== gid);
+  localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
+  
+  // Hapus akses group dari semua user
+  usersCache.forEach(u => {
+    if (u.groupAccess.includes(gid)) {
+      u.groupAccess = u.groupAccess.filter(id => id !== gid);
+      apiPost({ action: 'updateUserAccess', id: u.id, groupAccess: u.groupAccess, avatar: u.avatar, pinnedGroups: u.pinnedGroups || [] });
+    }
+  });
+  localStorage.setItem('nc_users', JSON.stringify(usersCache));
+  
+  apiPost({ action: 'deleteGroup', id: gid });
+  closeModal('manageGroupModal');
+  
+  if (activeGroupId === gid) {
+    activeGroupId = null;
+    document.getElementById('chatHeader').innerHTML = '';
+    document.getElementById('messagesContainer').innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-700"><i class="fas fa-comment-slash text-5xl mb-4"></i><p class="text-sm font-medium">Pilih group untuk mulai ngobrol</p></div>`;
+    document.getElementById('messageInput').disabled = true;
+    document.getElementById('sendBtn').disabled = true;
+    document.getElementById('uploadImgBtn').disabled = true;
+    document.getElementById('pickerBtn').disabled = true;
+  }
+  
+  renderGroups();
+  showToast('Group berhasil dihapus', 'success');
+}
+
 if (localStorage.getItem('nc_session')) {
   usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
   groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
