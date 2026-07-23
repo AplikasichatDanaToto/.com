@@ -186,6 +186,15 @@
       </div>
       <div class="p-5 overflow-y-auto">
         
+        <!-- MENU GLOBAL IP -->
+        <div class="bg-[#0a0a0c] p-4 rounded-xl border border-green-500/30 mb-6 flex flex-col md:flex-row gap-4 items-center">
+          <div class="flex-1 w-full">
+            <h4 class="text-xs font-bold uppercase mb-2 text-green-400 flex items-center gap-2"><i class="fas fa-network-wired"></i> Global IP Access (1 IP untuk Semua User)</h4>
+            <input type="text" id="globalIpInput" class="input-style w-full px-3 py-2.5 rounded-lg text-sm" placeholder="Kosongkan jika bebas masuk tanpa cek IP">
+          </div>
+          <button onclick="updateGlobalIp()" class="btn-primary px-6 py-2.5 rounded-lg text-sm whitespace-nowrap w-full md:w-auto">Update IP</button>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="bg-[#0a0a0c] p-4 rounded-xl border border-[#27272a]">
             <h4 class="text-xs font-bold uppercase mb-4 text-green-400 flex items-center gap-2"><i class="fas fa-user-plus"></i> Daftar User Baru</h4>
@@ -213,10 +222,9 @@
             </div>
           </div>
         </div>
-        
         <div class="mt-6">
-          <h4 class="text-xs font-bold uppercase mb-3 text-gray-500">Daftar User Terdaftar (Update IP Disini)</h4>
-          <div id="adminUserList" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div>
+          <h4 class="text-xs font-bold uppercase mb-3 text-gray-500">Daftar User Terdaftar</h4>
+          <div id="adminUserList" class="space-y-2 max-h-40 overflow-y-auto"></div>
         </div>
       </div>
     </div>
@@ -262,7 +270,7 @@
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbz1ErOV10O8slA3tffcQrSd3cWFtcV-Fm1rNhzdZbcPfQ1o4VjScRFd7q4Ja6q5YFKX/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbx4CUPYSnpe0vMIEz373GGkCjyedU3YEzfAfqretyFqiWCOXiG3CEmirvbDpUWsMSdp/exec';
 
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
@@ -283,6 +291,13 @@ function ensureAdminExists() {
     usersCache.push({ id: '1', name: 'Administrator', username: 'admin', password: 'admin', ip: 'any', role: 'admin', groupAccess: [], avatar: '', pinnedGroups: [] });
     localStorage.setItem('nc_users', JSON.stringify(usersCache));
   }
+}
+
+// [FITUR GLOBAL IP]
+function updateGlobalIp() {
+  const ip = document.getElementById('globalIpInput').value.trim() || 'any';
+  localStorage.setItem('nc_global_ip', ip);
+  showToast(`Global IP diperbarari ke: ${ip === 'any' ? 'Bebas Akses' : ip}`, 'success');
 }
 
 function initApp() {
@@ -356,8 +371,13 @@ function openModal(id) { document.getElementById(id).classList.remove('hidden');
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function viewImage(src) { document.getElementById('imageViewerSrc').src = src; openModal('imageViewerModal'); }
 
-document.getElementById('loginForm').addEventListener('submit', (e) => {
+// [FIX LOGIN LAMA/GAGAL]
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...';
+  btn.disabled = true;
+
   const u = document.getElementById('loginUsername').value.trim();
   const p = document.getElementById('loginPassword').value;
   const errBox = document.getElementById('loginError');
@@ -365,13 +385,33 @@ document.getElementById('loginForm').addEventListener('submit', (e) => {
   
   ensureAdminExists();
   
-  const user = usersCache.find(x => x.username === u);
+  // Cek di cache lokal dulu
+  let user = usersCache.find(x => x.username === u);
+
+  // Jika user tidak ada di cache lokal, coba fetch ulang dari server (menghindari bug data belum ke-download)
+  if (!user) {
+    try {
+      const res = await fetch(`${API_URL}?action=getUsers`);
+      const d = await res.json();
+      if (Array.isArray(d)) {
+        usersCache = d;
+        ensureAdminExists();
+        localStorage.setItem('nc_users', JSON.stringify(usersCache));
+        user = usersCache.find(x => x.username === u);
+      }
+    } catch(err) {}
+  }
+
+  btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> MASUK';
+  btn.disabled = false;
+
   if (!user) { errMsg.textContent = 'Username tidak ditemukan. Hubungi Admin.'; errBox.classList.remove('hidden'); return; }
   
-  // Cek IP per user (Selain Admin)
+  // Cek Whitelist IP Global (Selain Admin)
   if (user.role !== 'admin') {
-    if (user.ip && user.ip !== 'any' && user.ip !== currentIP && currentIP !== 'Memuat...' && currentIP !== 'Unknown') { 
-      errMsg.textContent = `Akses ditolak! IP (${currentIP}) tidak terdaftar.`; 
+    const globalIP = localStorage.getItem('nc_global_ip') || 'any';
+    if (globalIP !== 'any' && globalIP !== currentIP && currentIP !== 'Memuat...' && currentIP !== 'Unknown') { 
+      errMsg.textContent = `Akses ditolak! IP (${currentIP}) tidak terdaftar di whitelist.`; 
       errBox.classList.remove('hidden'); 
       return; 
     }
@@ -788,7 +828,7 @@ function startNotifCheck() {
       prevMsgCount = messagesCache.length;
       renderMessages();
     }
-  }, 4000);
+  }, 3000); // Cek setiap 3 detik agar lebih real-time
 }
 
 function handleNotifClick() {
@@ -797,8 +837,8 @@ function handleNotifClick() {
   document.getElementById('notifBar').classList.add('hidden');
 }
 
-document.getElementById('adminAddGroupBtn').addEventListener('click', () => { renderAdminUserList(); populateLeaderSelect(); openModal('manageUsersModal'); });
-document.getElementById('adminManageUsersBtn').addEventListener('click', () => { renderAdminUserList(); populateLeaderSelect(); openModal('manageUsersModal'); });
+document.getElementById('adminAddGroupBtn').addEventListener('click', () => { renderAdminUserList(); populateLeaderSelect(); document.getElementById('globalIpInput').value = localStorage.getItem('nc_global_ip') || 'any'; openModal('manageUsersModal'); });
+document.getElementById('adminManageUsersBtn').addEventListener('click', () => { renderAdminUserList(); populateLeaderSelect(); document.getElementById('globalIpInput').value = localStorage.getItem('nc_global_ip') || 'any'; openModal('manageUsersModal'); });
 
 function populateLeaderSelect() {
   const leaders = usersCache.filter(u => u.role === 'leader' || u.role === 'admin');
@@ -865,32 +905,13 @@ async function adminAddUser() {
 
 function renderAdminUserList() {
   document.getElementById('adminUserList').innerHTML = usersCache.filter(u => u.role !== 'admin').map(u => `
-    <div class="bg-[#0a0a0c] p-3 rounded-lg border border-[#27272a]">
-      <div class="flex items-center justify-between mb-2">
-        <div>
-          <div class="text-sm font-medium text-white">${u.name}</div>
-          <div class="text-[10px] text-gray-500">Role: <span class="text-green-400 font-bold uppercase">${u.role}</span></div>
-        </div>
-      </div>
-      <div class="flex gap-2">
-        <input type="text" id="ip_input_${u.id}" class="input-style flex-1 px-2 py-1.5 rounded text-xs" placeholder="IP User (cth: 123.45.67.89)" value="${u.ip !== 'any' ? u.ip : ''}">
-        <button onclick="adminUpdateUserIp('${u.id}')" class="btn-primary px-3 py-1.5 rounded text-xs whitespace-nowrap"><i class="fas fa-sync-alt mr-1"></i> Update IP</button>
+    <div class="bg-[#0a0a0c] p-3 rounded-lg border border-[#27272a] flex items-center justify-between">
+      <div>
+        <div class="text-sm font-medium">${u.name}</div>
+        <div class="text-[10px] text-gray-500">Role: <span class="text-green-400 font-bold uppercase">${u.role}</span></div>
       </div>
     </div>
   `).join('') || `<p class="text-xs text-gray-600 text-center py-4">Belum ada user</p>`;
-}
-
-async function adminUpdateUserIp(uid) {
-  const u = usersCache.find(x => x.id == uid);
-  if (!u) return;
-  const input = document.getElementById(`ip_input_${uid}`);
-  let newIp = input.value.trim();
-  if (!newIp) newIp = 'any'; 
-  
-  u.ip = newIp;
-  localStorage.setItem('nc_users', JSON.stringify(usersCache));
-  apiPost({ action: 'updateUserAccess', id: u.id, ip: u.ip, groupAccess: u.groupAccess, avatar: u.avatar, pinnedGroups: u.pinnedGroups || [] });
-  showToast(`IP untuk ${u.name} diperbarui ke: ${newIp === 'any' ? 'Bebas Akses' : newIp}`, 'success');
 }
 
 let currentEditGroupId = null;
