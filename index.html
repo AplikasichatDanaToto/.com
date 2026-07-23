@@ -286,7 +286,7 @@
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbzQvsFfO3_v6tFEy1ZmevOrjURf_V9O5t6KygEiP_G2ergUHFQ0idtP1bBOBK9hfwBR/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycby3TVAZ_350S6dfV7ZFjO9uSmNYquHNVi-H4YZ0qgYlBqobpU8yKeb2etZMKGuKm406/exec';
 
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
@@ -604,13 +604,17 @@ function updateChatHeader() {
   `;
 }
 
+// [FIX PESAN HILANG] Sistem Smart Merge agar pesan yang baru dikirim tidak tertimpa data lama dari server
 async function fetchMessages() {
   try {
     const res = await fetch(`${API_URL}?action=getMessages`);
     const data = await res.json();
     if (Array.isArray(data)) {
-      messagesCache = data;
-      localStorage.setItem('nc_messages', JSON.stringify(data));
+      const serverIds = new Set(data.map(m => m.id));
+      // Simpan pesan lokal yang umurnya kurang dari 15 detik (kemungkinan belum tersimpan di server)
+      const localOnly = messagesCache.filter(m => !serverIds.has(m.id) && (Date.now() - parseInt(m.timestamp) < 15000));
+      messagesCache = [...data, ...localOnly];
+      localStorage.setItem('nc_messages', JSON.stringify(messagesCache));
     } else {
       messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
     }
