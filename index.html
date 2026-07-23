@@ -277,12 +277,23 @@ let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 let lastRenderedMsgId = null;
 let currentGroupLogo = ''; 
 
+// [PERBAIKAN LOGIN] Pastikan Admin selalu ada di cache
+function ensureAdminExists() {
+  if (!usersCache.find(u => u.username === 'admin')) {
+    usersCache.push({ id: '1', name: 'Administrator', username: 'admin', password: 'admin', ip: 'any', role: 'admin', groupAccess: [], avatar: '', pinnedGroups: [] });
+    localStorage.setItem('nc_users', JSON.stringify(usersCache));
+  }
+}
+
 function initApp() {
   fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
     usersCache = Array.isArray(d) ? d : [];
-    if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
+    ensureAdminExists();
+    localStorage.setItem('nc_users', JSON.stringify(usersCache));
   }).catch(() => {
     usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
+    ensureAdminExists();
+    localStorage.setItem('nc_users', JSON.stringify(usersCache));
   });
 
   fetch(`${API_URL}?action=getGroups`).then(r => r.json()).then(d => {
@@ -352,15 +363,14 @@ document.getElementById('loginForm').addEventListener('submit', (e) => {
   const errBox = document.getElementById('loginError');
   const errMsg = document.getElementById('loginErrorMsg');
   
-  if (usersCache.length === 0 && u === 'admin' && p === 'admin') {
-    usersCache.push({ id: '1', name: 'Administrator', username: 'admin', password: 'admin', ip: 'any', role: 'admin', groupAccess: [], avatar: '', pinnedGroups: [] });
-    localStorage.setItem('nc_users', JSON.stringify(usersCache));
-  }
+  // Pastikan admin ada saat tombol login diklik
+  ensureAdminExists();
   
   const user = usersCache.find(x => x.username === u);
   if (!user) { errMsg.textContent = 'Username tidak ditemukan. Hubungi Admin.'; errBox.classList.remove('hidden'); return; }
   
-  if (user.ip && user.ip !== 'any' && user.ip !== currentIP && currentIP !== 'Memuat...' && currentIP !== 'Unknown') { 
+  // [PERBAIKAN LOGIN] Admin bebas dari cek IP
+  if (user.role !== 'admin' && user.ip && user.ip !== 'any' && user.ip !== currentIP && currentIP !== 'Memuat...' && currentIP !== 'Unknown') { 
     errMsg.textContent = `Akses ditolak! IP (${currentIP}) tidak terdaftar.`; 
     errBox.classList.remove('hidden'); 
     return; 
@@ -905,7 +915,6 @@ function renderGroupMembersChecklist(groupId) {
   document.getElementById('groupMembersList').innerHTML = html || '<p class="text-xs text-gray-600 text-center py-4">Belum ada user</p>';
   document.getElementById('memberCountDisplay').textContent = `${activeCount} Anggota`;
   
-  // Update Select All Checkbox State
   const selectableUsers = targetUsers.filter(u => u.id != g.leaderId);
   const checkedCount = selectableUsers.filter(u => u.groupAccess.includes(groupId)).length;
   const selectAllCb = document.getElementById('selectAllMembers');
@@ -932,8 +941,8 @@ async function toggleAllMembers(masterCheckbox) {
   });
   
   localStorage.setItem('nc_users', JSON.stringify(usersCache));
-  renderGroupMembersChecklist(gid); // Re-render to update count and individual checkboxes
-  renderGroups(); // Update count in sidebar
+  renderGroupMembersChecklist(gid);
+  renderGroups();
   showToast(isChecked ? 'Semua user ditambahkan' : 'Semua user dikeluarkan', 'success');
 }
 
@@ -944,8 +953,8 @@ async function toggleMemberAccess(uid, gid) {
     else { u.groupAccess.push(gid); showToast(`${u.name} ditambahkan`, 'success'); }
     localStorage.setItem('nc_users', JSON.stringify(usersCache));
     
-    renderGroupMembersChecklist(gid); // Update count and select-all state
-    renderGroups(); // Update count in sidebar
+    renderGroupMembersChecklist(gid);
+    renderGroups();
     apiPost({ action: 'updateUserAccess', id: u.id, groupAccess: u.groupAccess, avatar: u.avatar, pinnedGroups: u.pinnedGroups || [] });
   }
 }
@@ -999,6 +1008,8 @@ async function adminDeleteGroup() {
 async function checkSession() {
   if (localStorage.getItem('nc_session')) {
     usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
+    ensureAdminExists();
+    
     groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
     messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
     
@@ -1009,6 +1020,7 @@ async function checkSession() {
         const res = await fetch(`${API_URL}?action=getUsers`);
         const d = await res.json();
         usersCache = Array.isArray(d) ? d : [];
+        ensureAdminExists();
         if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
         user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
       } catch(e) {}
