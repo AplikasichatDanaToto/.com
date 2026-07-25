@@ -229,7 +229,6 @@
     </div>
   </div>
 
-  <!-- Tambahan input file untuk chat image -->
   <input type="file" id="imageInput" class="hidden" accept="image/*">
 
   <div id="profileModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
@@ -363,13 +362,39 @@ function safeParse(str, fallback) {
   } catch(e) { return fallback; }
 }
 
-// [FIX DATA HILANG] Fungsi MERGE data server + lokal (tidak saling menimpa/hapus)
+// [FIX DATA DOUBLE & HILANG] Fungsi MERGE data menggunakan Map (Menjamin 0 Duplikat)
 function mergeData(localArr, serverArr, key = 'id') {
-  if (!Array.isArray(serverArr) || serverArr.length === 0) return localArr;
-  if (!Array.isArray(localArr) || localArr.length === 0) return serverArr;
-  const serverIds = new Set(serverArr.map(item => String(item[key])));
-  const localOnly = localArr.filter(item => !serverIds.has(String(item[key])));
-  return [...serverArr, ...localOnly];
+  const map = new Map();
+  if (Array.isArray(serverArr)) {
+    serverArr.forEach(item => {
+      if (item && item[key] !== undefined && item[key] !== null) {
+        map.set(String(item[key]), item);
+      }
+    });
+  }
+  if (Array.isArray(localArr)) {
+    localArr.forEach(item => {
+      if (item && item[key] !== undefined && item[key] !== null) {
+        const idStr = String(item[key]);
+        if (!map.has(idStr)) {
+          map.set(idStr, item);
+        }
+      }
+    });
+  }
+  return Array.from(map.values());
+}
+
+// Fungsi untuk memastikan array benar-benar bersih dari duplikat sebelum render
+function uniqueById(arr) {
+  const seen = new Set();
+  return arr.filter(item => {
+    if (item && item.id !== undefined && !seen.has(String(item.id))) {
+      seen.add(String(item.id));
+      return true;
+    }
+    return false;
+  });
 }
 
 let usersCache = [];
@@ -415,14 +440,15 @@ async function apiPost(payload) {
   }
 }
 
-// [FIX DATA PERSIST] Fetch users dari server lalu MERGE dengan lokal
+// [FIX ROBUST API] Fetch users dari server, tangkap format array atau {data: array}
 async function fetchUsers() {
   try {
     const res = await fetch(`${API_URL}?action=getUsers`);
     if (!res.ok) return;
     const data = await res.json();
-    if (Array.isArray(data)) {
-      usersCache = mergeData(usersCache, data, 'id');
+    const actualData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+    if (actualData.length > 0) {
+      usersCache = mergeData(usersCache, actualData, 'id');
       ensureAdminExists();
       localStorage.setItem('nc_users', JSON.stringify(usersCache));
     }
@@ -431,16 +457,17 @@ async function fetchUsers() {
   }
 }
 
-// [FIX DATA PERSIST] Fetch groups dari server lalu MERGE dengan lokal
+// [FIX ROBUST API] Fetch groups dari server, tangkap format array atau {data: array}
 async function fetchGroups() {
   try {
     const res = await fetch(`${API_URL}?action=getGroups`);
     if (!res.ok) return;
     const data = await res.json();
-    if (Array.isArray(data)) {
-      groupsCache = mergeData(groupsCache, data, 'id');
+    const actualData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+    if (actualData.length > 0) {
+      groupsCache = mergeData(groupsCache, actualData, 'id');
       localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
-      if (isDashboardActive) renderGroups(); // Update UI instan saat data server datang
+      if (isDashboardActive) renderGroups(); 
     }
   } catch(e) {
     console.error('fetchGroups error:', e);
@@ -502,7 +529,6 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   
   let user = usersCache.find(x => x.username === u);
 
-  // [FIX] Jika user tidak ada di lokal, fetch dari server dan MERGE (bukan replace)
   if (!user) {
     await fetchUsers();
     user = usersCache.find(x => x.username === u);
@@ -529,8 +555,9 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   showDashboard(user);
 });
 
-// [FIX UTAMA DELAY] showDashboard sekarang TIDAK menunggu fetch server. Langsung tampil instan dari cache lokal!
-function showDashboard(user) {
+// [FIX UTAMA LOADING] showDashboard mendeteksi apakah ada local cache. 
+// Jika ada -> INSTAN. Jika tidak (incognito) -> Tunggu server.
+async function showDashboard(user) {
   if (!user) {
     localStorage.removeItem('nc_session');
     document.getElementById('loginView').classList.remove('hidden');
@@ -548,11 +575,23 @@ function showDashboard(user) {
       Notification.requestPermission();
     }
     
-    // 1. Langsung render UI dan Groups dari data lokal (INSTAN, 0.1 detik)
-    updateDashboardUI(user);
+    const hasLocalData = groupsCache.length > 0;
     
-    // 2. Fetch data dari server di BEKALANG (non-blocking). Jika ada group baru, akan otomatis masuk list.
-    syncServerData();
+    if (hasLocalData) {
+      // 1. Langsung render UI dari cache lokal (INSTAN, 0.1 detik)
+      updateDashboardUI(user);
+      syncServerData();
+    } else {
+      // 2. INCOGNITO / FIRST LOAD: Tampilkan loading, tunggu server selesai
+      document.getElementById('userName').textContent = user.name;
+      document.getElementById('userRole').textContent = user.role.toUpperCase() + ' • Online';
+      document.getElementById('userAvatarHeader').src = user.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${user.name}`;
+      
+      document.getElementById('groupList').innerHTML = `<div class="text-center text-gray-500 text-xs p-4"><i class="fas fa-spinner fa-spin"></i> Memuat data dari server...</div>`;
+      document.getElementById('messagesContainer').innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-700"><i class="fas fa-spinner fa-spin text-4xl mb-4"></i><p class="text-sm font-medium">Memuat pesan...</p></div>`;
+      
+      await syncServerData(user);
+    }
   } else {
     updateDashboardUI(user);
   }
@@ -575,7 +614,6 @@ function updateDashboardUI(user) {
   
   renderGroups();
   
-  // [FIX GROUP LANGSUNG MUNCUL] Auto-select group pertama jika belum ada yang dipilih
   if (!activeGroupId) {
     const myGroups = groupsCache.filter(g => 
       user.role === 'admin' || 
@@ -584,7 +622,6 @@ function updateDashboardUI(user) {
     if (myGroups.length > 0) {
       selectGroup(myGroups[0].id);
     } else {
-      // Tampilan jika belum ada group
       document.getElementById('chatHeader').innerHTML = '';
       document.getElementById('messagesContainer').innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-700"><i class="fas fa-comment-slash text-5xl mb-4"></i><p class="text-sm font-medium">Anda belum tergabung di group manapun.</p></div>`;
       document.getElementById('messageInput').disabled = true;
@@ -595,20 +632,23 @@ function updateDashboardUI(user) {
   }
 }
 
-// Proses sinkronisasi server yang berjalan di background (tidak menghentikan UI)
-async function syncServerData() {
+async function syncServerData(user) {
   await Promise.all([fetchUsers(), fetchGroups()]);
   
-  // Update UI jika user data berubah dari server
   const sessionId = localStorage.getItem('nc_session');
+  let activeUser = user;
   if (sessionId) {
     const updatedUser = usersCache.find(u => String(u.id) === String(sessionId));
     if (updatedUser) {
-      updateDashboardUI(updatedUser);
+      activeUser = updatedUser;
     }
   }
   
-  fetchMessages();
+  if (activeUser) {
+    updateDashboardUI(activeUser);
+  }
+  
+  await fetchMessages();
   startNotifCheck();
 }
 
@@ -653,6 +693,14 @@ function renderGroups() {
   const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   if (!user) return;
   const list = document.getElementById('groupList');
+  
+  // [FIX ANTI DOUBLE] Bersihkan groupsCache dari duplikat sebelum di proses
+  const cleanGroups = uniqueById(groupsCache);
+  if (cleanGroups.length !== groupsCache.length) {
+    groupsCache = cleanGroups;
+    localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
+  }
+
   let myGroups = groupsCache.filter(g => user.role === 'admin' || (user.groupAccess && user.groupAccess.includes(g.id)));
   
   myGroups.sort((a, b) => {
@@ -749,8 +797,9 @@ async function fetchMessages() {
   try {
     const res = await fetch(`${API_URL}?action=getMessages`);
     const data = await res.json();
-    if (Array.isArray(data)) {
-      const validServerMsgs = data.filter(m => !deletedMsgIds.has(m.id));
+    const actualData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+    if (actualData.length > 0) {
+      const validServerMsgs = actualData.filter(m => !deletedMsgIds.has(m.id));
       const serverIds = new Set(validServerMsgs.map(m => m.id));
       const localOnly = messagesCache.filter(m => !serverIds.has(m.id) && !deletedMsgIds.has(m.id) && (Date.now() - parseInt(m.timestamp) < 15000));
       messagesCache = [...validServerMsgs, ...localOnly];
@@ -1037,7 +1086,6 @@ function startNotifCheck() {
     pollCount++;
     await fetchMessages();
     
-    // [FIX] Setiap 30 detik, sync groups & users juga (agar data tidak hilang)
     if (pollCount % 10 === 0) {
       await fetchGroups();
       await fetchUsers();
@@ -1360,10 +1408,7 @@ async function adminDeleteGroup() {
   showToast('Group berhasil dihapus', 'success');
 }
 
-// [FIX UTAMA F5] initializeApp sekarang TIDAK PERNAH hapus session
-// Dan langsung masuk dashboard menggunakan data local (INSTAN)
 async function initializeApp() {
-  // 1. Load local cache dengan aman (Eksekusi Syncronous, 0.1 detik)
   let uArr = safeParse(localStorage.getItem('nc_users'), []);
   if (!Array.isArray(uArr)) uArr = [];
   usersCache = uArr;
@@ -1381,14 +1426,11 @@ async function initializeApp() {
   const sessionId = localStorage.getItem('nc_session');
   if (!sessionId) return;
 
-  // 2. Cari user di lokal cache DULU
   let user = usersCache.find(u => String(u.id) === String(sessionId));
 
   if (user) {
-    // User ditemukan di lokal - LANGSUNG masuk dashboard (INSTAN)
     showDashboard(user);
   } else {
-    // User tidak di lokal (misal incognito) - fetch dari server dulu
     await fetchUsers();
     await fetchGroups();
     
