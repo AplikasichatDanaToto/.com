@@ -86,12 +86,12 @@
 
   <div id="loginView" class="h-screen flex items-center justify-center relative">
     <div class="relative w-full max-w-md mx-4">
-      <div class="text-center mb-8">
-        <img src="https://lh3.googleusercontent.com/d/1JxvqFXKhF56O6ww8YTn-8iV3byNHvyu2" alt="Danatoto" class="w-28 h-28 rounded-2xl mx-auto mb-4 object-cover logo-glow">
-        <h1 class="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent">DANATOTO CHAT</h1>
-        <p class="text-gray-400 text-sm mt-2 tracking-widest uppercase">Enterprise Communication</p>
-      </div>
       <div class="glass rounded-2xl p-8 shadow-2xl neon-border">
+        <div class="text-center mb-8">
+          <img src="https://lh3.googleusercontent.com/d/1JxvqFXKhF56O6ww8YTn-8iV3byNHvyu2" alt="Danatoto" class="w-20 h-20 rounded-xl mx-auto mb-4 object-cover logo-glow">
+          <h1 class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent">DANATOTO CHAT</h1>
+          <p class="text-gray-400 text-xs mt-2 tracking-widest uppercase">Enterprise Communication</p>
+        </div>
         <form id="loginForm" class="space-y-4">
           <div>
             <label class="text-xs text-gray-400 ml-1 mb-1 block">Username</label>
@@ -287,7 +287,7 @@
         </div>
       </div>
     </div>
-  </div> 
+  </div>
 
   <div id="imageViewerModal" class="hidden fixed inset-0 bg-black/95 z-[60] flex items-center justify-center p-8 cursor-pointer" onclick="closeModal('imageViewerModal')"><img id="imageViewerSrc" class="max-w-full max-h-full object-contain rounded-lg" src=""></div>
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
@@ -296,10 +296,10 @@
 // =======================================================
 // PASTE LINK GAMBAR BACKGROUND LUAR DI BAWAH INI:
 // =======================================================
-const LOGIN_BG_URL = 'https://drive.google.com/thumbnail?id=1p6fDhpOfl6dtj-IkM7ZQ4HtxROPEOCcv&sz=w1920-h1080';
+const LOGIN_BG_URL = ''; // Contoh: 'https://wallpapercave.com/wp/wp12345.jpg'
 // =======================================================
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbyO-lCWJeRSXcHa0pGhYYgDci376Yxgk_VfKVpgYN7LjJIYGUoVh5oLkh9_N5V6LQql/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycby3TVAZ_350S6dfV7ZFjO9uSmNYquHNVi-H4YZ0qgYlBqobpU8yKeb2etZMKGuKm406/exec';
 
 if (LOGIN_BG_URL) {
   document.getElementById('loginView').style.backgroundImage = `url('${LOGIN_BG_URL}')`;
@@ -319,6 +319,7 @@ let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 
 let lastRenderedMsgId = null;
 let currentGroupLogo = ''; 
+let animatedMsgIds = new Set(); // [FIX GONCANG] Track pesan yang sudah dianimasi
 
 function ensureAdminExists() {
   if (!usersCache.find(u => u.username === 'admin')) {
@@ -598,6 +599,7 @@ function selectGroup(id) {
   document.getElementById('uploadImgBtn').disabled = false;
   document.getElementById('pickerBtn').disabled = false;
   lastRenderedMsgId = null; 
+  animatedMsgIds.clear(); // [FIX GONCANG] Bersihkan cache animasi saat ganti group
   renderGroups();
   renderMessages();
   updateChatHeader();
@@ -650,6 +652,9 @@ function renderMessages(searchTerm = '') {
     msgs = msgs.filter(m => (m.content && !m.content.startsWith('data:image') && m.content.toLowerCase().includes(term)) || m.name.toLowerCase().includes(term));
   }
   
+  // [FIX SCROLL] Cek apakah user sedang membaca chat lama di atas
+  const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+  
   let html = '';
   let lastDate = '';
   const emojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -679,8 +684,12 @@ function renderMessages(searchTerm = '') {
 
       const pickerPos = isSelf ? 'right-0' : 'left-0';
       
+      // [FIX GONCANG] Hanya beri kelas msg-in jika pesan ini belum pernah dirender sebelumnya
+      const msgAnimClass = animatedMsgIds.has(msg.id) ? '' : 'msg-in';
+      animatedMsgIds.add(msg.id);
+      
       html += `
-        <div class="msg-group msg-in flex gap-3 mb-6 ${isSelf ? 'flex-row-reverse' : ''}">
+        <div id="msg-${msg.id}" class="msg-group ${msgAnimClass} flex gap-3 mb-6 ${isSelf ? 'flex-row-reverse' : ''}">
           <img src="${avatar}" class="w-9 h-9 rounded-full flex-shrink-0 object-cover mt-1">
           <div class="max-w-[70%]">
             <div class="flex items-center gap-2 ${isSelf ? 'justify-end' : ''} mb-1">
@@ -705,7 +714,11 @@ function renderMessages(searchTerm = '') {
     });
   }
   container.innerHTML = html;
-  if (!searchTerm) container.scrollTop = container.scrollHeight;
+  
+  // [FIX SCROLL] Hanya auto scroll ke bawah jika user memang ada di bawah, atau sedang mencari
+  if (!searchTerm && isNearBottom) {
+    container.scrollTop = container.scrollHeight;
+  }
   
   if (searchTerm) {
     const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
@@ -715,10 +728,20 @@ function renderMessages(searchTerm = '') {
   }
 }
 
+// [FIX HAPUS LAMA] Langsung hilang tanpa render ulang yang bikin goncang
 async function deleteMessage(msgId) {
   if (!confirm('Hapus pesan ini?')) return;
   messagesCache = messagesCache.filter(m => m.id !== msgId);
-  renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : '');
+  animatedMsgIds.delete(msgId);
+  
+  const el = document.getElementById('msg-' + msgId);
+  if (el) {
+    el.style.transition = 'opacity 0.2s, transform 0.2s';
+    el.style.opacity = '0';
+    el.style.transform = 'scale(0.8)';
+    setTimeout(() => el.remove(), 200);
+  }
+  
   apiPost({ action: 'deleteMessage', id: msgId });
   showToast('Pesan dihapus', 'success');
 }
