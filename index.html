@@ -84,21 +84,6 @@
   .gif-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 4px; cursor: pointer; transition: transform 0.1s; }
   .gif-item img:hover { transform: scale(1.05); }
   
-  /* [FIX GERIGI TIDAK BISA DIKLIK] */
-  .action-btn { 
-    z-index: 10 !important; 
-    position: relative !important; 
-    pointer-events: auto !important; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center;
-    width: 2rem; 
-    height: 2rem; 
-    border-radius: 0.375rem; 
-    cursor: pointer;
-  }
-  .action-btn:hover { background: rgba(255,255,255,0.1); }
-  
   .online-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; border: 2px solid #0d0d12; position: absolute; bottom: 0; right: 0; animation: pulse 2s infinite; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
   
@@ -390,34 +375,6 @@ function updateGlobalIp() {
   showToast(`Global IP diperbarari ke: ${ip === 'any' ? 'Bebas Akses' : ip}`, 'success');
 }
 
-function initApp() {
-  fetch(`${API_URL}?action=getUsers`).then(r => r.json()).then(d => {
-    usersCache = Array.isArray(d) ? d : [];
-    ensureAdminExists();
-    localStorage.setItem('nc_users', JSON.stringify(usersCache));
-  }).catch(() => {
-    usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
-    ensureAdminExists();
-    localStorage.setItem('nc_users', JSON.stringify(usersCache));
-  });
-
-  fetch(`${API_URL}?action=getGroups`).then(r => r.json()).then(d => {
-    if (Array.isArray(d) && d.length > 0) {
-      const uniqueGroups = [];
-      const groupIds = new Set();
-      d.forEach(g => {
-        if (!groupIds.has(g.id)) {
-          groupIds.add(g.id);
-          uniqueGroups.push(g);
-        }
-      });
-      groupsCache = uniqueGroups;
-      localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
-    }
-  }).catch(() => {});
-}
-initApp();
-
 async function apiPost(payload) {
   try {
     await fetch(API_URL, {
@@ -517,8 +474,13 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   showDashboard(user);
 });
 
-// [FIX F5 LOGOUT TOTAL] Fungsi ini sekarang menerima object user langsung
 async function showDashboard(user) {
+  if (!user) {
+    document.getElementById('loginView').classList.remove('hidden');
+    document.getElementById('dashboardView').classList.add('hidden');
+    return;
+  }
+  
   document.getElementById('loginView').classList.add('hidden');
   document.getElementById('dashboardView').classList.remove('hidden');
   
@@ -536,12 +498,18 @@ async function showDashboard(user) {
     Notification.requestPermission();
   }
   
+  // Pakai data lokal dulu agar instan dan tidak mental saat F5
   groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
   renderGroups(); 
   
   fetchMessages();
   startNotifCheck();
   
+  // Update data dari server di background dengan aman (tanpa hapus lokal jika server kosong)
+  syncServerData();
+}
+
+async function syncServerData() {
   try {
     const res = await fetch(`${API_URL}?action=getGroups`);
     const data = await res.json();
@@ -624,11 +592,11 @@ function renderGroups() {
           </div>
           <span class="text-[10px] text-gray-600">${memberCount} anggota</span>
         </div>
-        <div class="flex items-center gap-1 flex-shrink-0">
-          <button class="action-btn text-gray-700 hover:text-white" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan">
+        <div class="flex items-center gap-1 flex-shrink-0 z-10 relative">
+          <button class="p-2 rounded-md hover:bg-white/10 text-gray-500 hover:text-white transition-colors" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan">
             <i class="fas fa-thumbtack text-xs ${isPinned ? 'text-green-400' : ''}"></i>
           </button>
-          ${isLeader ? `<button class="action-btn text-gray-700 hover:text-white" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')" title="Kelola"><i class="fas fa-cog text-xs"></i></button>` : ''}
+          ${isLeader ? `<button class="p-2 rounded-md hover:bg-white/10 text-gray-500 hover:text-white transition-colors" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')" title="Kelola"><i class="fas fa-cog text-xs"></i></button>` : ''}
         </div>
       </div>`;
   }).join('');
