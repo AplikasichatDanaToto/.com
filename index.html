@@ -319,7 +319,9 @@ let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 
 let lastRenderedMsgId = null;
 let currentGroupLogo = ''; 
-let deletedMsgIds = new Set(); // [FIX GHOST MESSAGE] Menyimpan ID pesan yang dihapus agar tidak dimuat lagi dari server
+
+// [FIX PERMANEN] Simpan ID pesan yang dihapus ke LocalStorage agar tidak muncul lagi saat di-Refresh (F5)
+let deletedMsgIds = new Set(JSON.parse(localStorage.getItem('nc_deleted_msgs') || '[]'));
 
 function ensureAdminExists() {
   if (!usersCache.find(u => u.username === 'admin')) {
@@ -600,7 +602,7 @@ function selectGroup(id) {
   document.getElementById('pickerBtn').disabled = false;
   lastRenderedMsgId = null; 
   renderGroups();
-  renderMessages('', true); // isInitialLoad = true agar tidak animasi semua chat lama
+  renderMessages('', true);
   updateChatHeader();
 }
 
@@ -628,7 +630,6 @@ async function fetchMessages() {
     const res = await fetch(`${API_URL}?action=getMessages`);
     const data = await res.json();
     if (Array.isArray(data)) {
-      // [FIX GHOST MESSAGE] Filter pesan yang sudah ditandai dihapus
       const validServerMsgs = data.filter(m => !deletedMsgIds.has(m.id));
       const serverIds = new Set(validServerMsgs.map(m => m.id));
       const localOnly = messagesCache.filter(m => !serverIds.has(m.id) && !deletedMsgIds.has(m.id) && (Date.now() - parseInt(m.timestamp) < 15000));
@@ -653,7 +654,6 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
     msgs = msgs.filter(m => (m.content && !m.content.startsWith('data:image') && m.content.toLowerCase().includes(term)) || m.name.toLowerCase().includes(term));
   }
   
-  // [FIX SCROLL] Cek apakah user sedang membaca chat lama di atas
   const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
   
   let html = '';
@@ -685,7 +685,6 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
 
       const pickerPos = isSelf ? 'right-0' : 'left-0';
       
-      // [FIX GONCANG] Animasi hanya untuk pesan baru (umur < 5 detik) dan bukan saat initial load / search
       const isFreshMsg = !isInitialLoad && !searchTerm && (Date.now() - parseInt(msg.timestamp) < 5000);
       const msgAnimClass = isFreshMsg ? 'msg-in' : '';
       
@@ -716,7 +715,6 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
   }
   container.innerHTML = html;
   
-  // [FIX SCROLL] Hanya auto scroll ke bawah jika user memang ada di bawah, atau sedang mencari
   if (!searchTerm && isNearBottom) {
     container.scrollTop = container.scrollHeight;
   }
@@ -729,15 +727,19 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
   }
 }
 
-// [FIX HAPUS PERMANEN] Tandai ID pesan agar tidak pernah dimuat lagi dari server
 async function deleteMessage(msgId) {
   if (!confirm('Hapus pesan ini?')) return;
   
-  deletedMsgIds.add(msgId); // Kunci ID ini
-  messagesCache = messagesCache.filter(m => m.id !== msgId); // Hapus dari cache lokal
-  renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : ''); // Render ulang tanpa pesan itu
+  // 1. Tambahkan ID ke Set dan Simpan ke LocalStorage agar tidak bisa dimuat lagi walau di-Refresh
+  deletedMsgIds.add(msgId);
+  localStorage.setItem('nc_deleted_msgs', JSON.stringify([...deletedMsgIds]));
   
-  apiPost({ action: 'deleteMessage', id: msgId }); // Kirim perintah hapus ke server
+  // 2. Hapus dari cache lokal dan render ulang layar
+  messagesCache = messagesCache.filter(m => m.id !== msgId);
+  renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : '');
+  
+  // 3. Kirim perintah hapus ke server
+  apiPost({ action: 'deleteMessage', id: msgId });
   showToast('Pesan dihapus permanen', 'success');
 }
 
