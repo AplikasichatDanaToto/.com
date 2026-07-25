@@ -361,6 +361,7 @@ function safeParse(str, fallback) {
 let usersCache = [];
 let messagesCache = [];
 let groupsCache = [];
+let isDashboardActive = false;
 
 // KUNCI PERBAIKAN F5: Pastikan data Array/Object tidak rusak
 let lrObj = safeParse(localStorage.getItem('nc_lastread'), {});
@@ -493,11 +494,22 @@ async function showDashboard(user) {
     localStorage.removeItem('nc_session');
     document.getElementById('loginView').classList.remove('hidden');
     document.getElementById('dashboardView').classList.add('hidden');
+    isDashboardActive = false;
     return;
   }
   
-  document.getElementById('loginView').classList.add('hidden');
-  document.getElementById('dashboardView').classList.remove('hidden');
+  if (!isDashboardActive) {
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('dashboardView').classList.remove('hidden');
+    isDashboardActive = true;
+    
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    
+    fetchMessages();
+    startNotifCheck();
+  }
   
   document.getElementById('userName').textContent = user.name;
   document.getElementById('userRole').textContent = user.role.toUpperCase() + ' • Online';
@@ -507,46 +519,20 @@ async function showDashboard(user) {
     document.getElementById('adminAddGroupBtn').classList.remove('hidden');
     document.getElementById('adminAddGroupBtn').classList.add('flex');
     document.getElementById('adminPanel').classList.remove('hidden');
+  } else {
+    document.getElementById('adminAddGroupBtn').classList.add('hidden');
+    document.getElementById('adminAddGroupBtn').classList.remove('flex');
+    document.getElementById('adminPanel').classList.add('hidden');
   }
   
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
-  
-  // Gunakan data dari cache lokal agar instan dan aman dari F5
-  let gArr = safeParse(localStorage.getItem('nc_groups'), []);
-  if (!Array.isArray(gArr)) gArr = [];
-  groupsCache = gArr;
-  renderGroups(); 
-  
-  fetchMessages();
-  startNotifCheck();
-  
-  // Update data dari server di background
-  syncServerData();
+  renderGroups();
 }
 
-async function syncServerData() {
-  try {
-    const res = await fetch(`${API_URL}?action=getGroups`);
-    const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) {
-      const uniqueGroups = [];
-      const groupIds = new Set();
-      data.forEach(g => {
-        if (!groupIds.has(g.id)) {
-          groupIds.add(g.id);
-          uniqueGroups.push(g);
-        }
-      });
-      groupsCache = uniqueGroups;
-      localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
-      renderGroups(); 
-    }
-  } catch(e) {}
-}
-
-document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.removeItem('nc_session'); location.reload(); });
+document.getElementById('logoutBtn').addEventListener('click', () => { 
+  localStorage.removeItem('nc_session'); 
+  isDashboardActive = false;
+  location.reload(); 
+});
 
 function openProfileModal() {
   const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
@@ -1270,52 +1256,64 @@ async function adminDeleteGroup() {
   showToast('Group berhasil dihapus', 'success');
 }
 
-async function checkSession() {
+// [FIX F5 LOGOUT TOTAL] Sistem inisialisasi yang sangat aman
+async function initializeApp() {
+  // 1. Load local cache safely
+  let uArr = safeParse(localStorage.getItem('nc_users'), []);
+  if (!Array.isArray(uArr)) uArr = [];
+  usersCache = uArr;
+
+  let gArr = safeParse(localStorage.getItem('nc_groups'), []);
+  if (!Array.isArray(gArr)) gArr = [];
+  groupsCache = gArr;
+
+  let mArr = safeParse(localStorage.getItem('nc_messages'), []);
+  if (!Array.isArray(mArr)) mArr = [];
+  messagesCache = mArr;
+
+  ensureAdminExists();
+
   const sessionId = localStorage.getItem('nc_session');
-  if (!sessionId) return;
+  let localUser = sessionId ? usersCache.find(u => String(u.id) === String(sessionId)) : null;
 
+  // Jika user ada di lokal, LANGSUNG MASUK dashboard tanpa nunggu server
+  if (localUser) {
+    showDashboard(localUser);
+  }
+
+  // 2. Fetch dari server untuk sinkronisasi data (Aman, tidak akan hapus lokal jika server kosong)
   try {
-    let uArr = safeParse(localStorage.getItem('nc_users'), []);
-    if (!Array.isArray(uArr)) uArr = [];
-    usersCache = uArr;
-    
-    let gArr = safeParse(localStorage.getItem('nc_groups'), []);
-    if (!Array.isArray(gArr)) gArr = [];
-    groupsCache = gArr;
-    
-    let mArr = safeParse(localStorage.getItem('nc_messages'), []);
-    if (!Array.isArray(mArr)) mArr = [];
-    messagesCache = mArr;
-    
-    ensureAdminExists();
-
-    let user = usersCache.find(u => String(u.id) === String(sessionId));
-    
-    if (user) {
-      showDashboard(user);
-      return;
-    }
-    
-    // If not in local, fetch from server
     const res = await fetch(`${API_URL}?action=getUsers`);
     const d = await res.json();
-    if (Array.isArray(d)) {
+    if (Array.isArray(d) && d.length > 0) {
       usersCache = d;
       ensureAdminExists();
       localStorage.setItem('nc_users', JSON.stringify(usersCache));
-      user = usersCache.find(u => String(u.id) === String(sessionId));
     }
-    
-    if (user) {
-      showDashboard(user);
-    } else {
-      localStorage.removeItem('nc_session');
+
+    const resG = await fetch(`${API_URL}?action=getGroups`);
+    const dG = await resG.json();
+    if (Array.isArray(dG) && dG.length > 0) {
+      groupsCache = dG;
+      localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
     }
-  } catch(e) {
-    console.error("Session error:", e);
+
+    // 3. Re-check session dengan data server terbaru
+    if (sessionId) {
+      let serverUser = usersCache.find(u => String(u.id) === String(sessionId));
+      if (serverUser) {
+        // Update UI jika ada perubahan dari server (atau jika localUser sebelumnya tidak ada)
+        showDashboard(serverUser);
+      } else if (!localUser) {
+        // Jika user tidak ada di lokal maupun server, baru clear session
+        localStorage.removeItem('nc_session');
+      }
+    }
+  } catch (err) {
+    // Jika gagal fetch (offline/server down), biarkan tetap di dashboard jika localUser ada
   }
 }
-checkSession();
+initializeApp();
 </script>
 </body>
 </html>
