@@ -78,6 +78,10 @@
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
   
   .login-bg-custom { background-size: cover; background-position: center; }
+
+  /* [FIX TOMBOL HAPUS TERANG] */
+  .btn-delete-msg { color: #a1a1aa; transition: all 0.2s; padding: 2px 6px; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; }
+  .btn-delete-msg:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
 </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -319,6 +323,7 @@ let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 
 let lastRenderedMsgId = null;
 let currentGroupLogo = ''; 
+let lastNotifiedMsgId = null; // [FIX NOTIF] Track pesan terakhir yang dinotif agar tidak spam
 
 // [FIX PERMANEN] Simpan ID pesan yang dihapus ke LocalStorage agar tidak muncul lagi saat di-Refresh (F5)
 let deletedMsgIds = new Set(JSON.parse(localStorage.getItem('nc_deleted_msgs') || '[]'));
@@ -475,6 +480,11 @@ async function showDashboard() {
     document.getElementById('adminAddGroupBtn').classList.remove('hidden');
     document.getElementById('adminAddGroupBtn').classList.add('flex');
     document.getElementById('adminPanel').classList.remove('hidden');
+  }
+  
+  // [FIX NOTIF] Minta izin notifikasi browser saat masuk dashboard
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
   }
   
   groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
@@ -707,7 +717,7 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
             </div>
             <div class="flex gap-2 mt-1 items-center ${isSelf ? 'justify-end' : ''}">
               ${reactionsHtml}
-              ${isSelf ? `<button onclick="deleteMessage('${msg.id}')" class="text-[10px] text-gray-600 hover:text-red-400 transition-colors px-1" title="Hapus Pesan"><i class="fas fa-trash"></i></button>` : ''}
+              ${isSelf ? `<button onclick="deleteMessage('${msg.id}')" class="btn-delete-msg" title="Hapus Pesan"><i class="fas fa-trash"></i> Hapus</button>` : ''}
             </div>
           </div>
         </div>`;
@@ -730,15 +740,12 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
 async function deleteMessage(msgId) {
   if (!confirm('Hapus pesan ini?')) return;
   
-  // 1. Tambahkan ID ke Set dan Simpan ke LocalStorage agar tidak bisa dimuat lagi walau di-Refresh
   deletedMsgIds.add(msgId);
   localStorage.setItem('nc_deleted_msgs', JSON.stringify([...deletedMsgIds]));
   
-  // 2. Hapus dari cache lokal dan render ulang layar
   messagesCache = messagesCache.filter(m => m.id !== msgId);
   renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : '');
   
-  // 3. Kirim perintah hapus ke server
   apiPost({ action: 'deleteMessage', id: msgId });
   showToast('Pesan dihapus permanen', 'success');
 }
@@ -877,13 +884,27 @@ function startNotifCheck() {
     });
     
     const notifBar = document.getElementById('notifBar');
-    if (latestMsg) {
+    // [FIX NOTIF GROUP] Tampilkan notif browser dan banner jika ada pesan baru
+    if (latestMsg && latestMsg.id !== lastNotifiedMsgId) {
+      lastNotifiedMsgId = latestMsg.id;
       const group = groupsCache.find(g => g.id === latestGroupId);
       document.getElementById('notifText').textContent = `Pesan baru di ${group.name} dari ${latestMsg.name}`;
       notifBar.classList.remove('hidden');
       notifBar.classList.add('flex');
       notifBar.dataset.targetGroup = latestGroupId;
-    } else { notifBar.classList.add('hidden'); notifBar.classList.remove('flex'); }
+
+      // Browser Notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(`Pesan baru di ${group.name}`, { 
+            body: latestMsg.type === 'text' ? `${latestMsg.name}: ${latestMsg.content}` : `${latestMsg.name} mengirim media`,
+            icon: latestMsg.avatar || 'https://lh3.googleusercontent.com/d/1JxvqFXKhF56O6ww8YTn-8iV3byNHvyu2'
+          });
+        } catch(e) {}
+      }
+    } else if (!latestMsg) { 
+      notifBar.classList.add('hidden'); notifBar.classList.remove('flex'); 
+    }
     
     renderGroups();
     if (activeGroupId && messagesCache.length !== prevMsgCount) {
