@@ -52,11 +52,19 @@
   .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(239,68,68,0.3); }
 
   .msg-group { position: relative; }
+  
+  /* [FIX EMOTICON SEJAJAR HAPUS] */
+  .msg-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; position: relative; padding-top: 5px; }
+  .btn-delete-msg { color: #a1a1aa; transition: all 0.2s; padding: 2px 6px; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; background: transparent; border: none; }
+  .btn-delete-msg:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+  
   .reaction-picker { 
-    position: absolute; bottom: -15px; background: #18181b; border: 1px solid #52525b; 
-    border-radius: 20px; padding: 4px 6px; display: flex; gap: 4px; z-index: 10; 
+    position: absolute; bottom: 100%; left: 0; margin-bottom: 8px;
+    background: #18181b; border: 1px solid #52525b; 
+    border-radius: 20px; padding: 4px 6px; display: flex; gap: 4px; z-index: 20; 
     opacity: 0; pointer-events: none; transition: opacity 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
   }
+  .reaction-picker.right-align { left: auto; right: 0; }
   .msg-group:hover .reaction-picker { opacity: 1; pointer-events: auto; }
   .reaction-picker button { font-size: 18px; padding: 2px 4px; border-radius: 50%; transition: transform 0.1s; background: transparent; border: none; cursor: pointer; }
   .reaction-picker button:hover { transform: scale(1.3); background: #3f3f46; }
@@ -78,13 +86,6 @@
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
   
   .login-bg-custom { background-size: cover; background-position: center; }
-
-  /* [FIX TOMBOL HAPUS & REAKSI SEJAJAR] */
-  .msg-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-  .btn-delete-msg { color: #a1a1aa; transition: all 0.2s; padding: 2px 6px; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; background: transparent; border: none; }
-  .btn-delete-msg:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
-
-  /* [FITUR TAG] */
   .tag-highlight { color: #60a5fa; background: rgba(59, 130, 246, 0.1); padding: 1px 4px; border-radius: 4px; font-weight: 600; }
 </style>
 </head>
@@ -393,10 +394,8 @@ function showToast(msg, type='info') {
 
 function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
-// [FITUR TAG] Fungsi untuk merubah @all atau @username menjadi berwarna biru
 function formatContent(content) {
   let safeContent = escapeHtml(content);
-  // Regex untuk mendeteksi @ diikuti huruf/angka
   safeContent = safeContent.replace(/(@[a-zA-Z0-9_]+)/g, '<span class="tag-highlight">$1</span>');
   return safeContent;
 }
@@ -694,17 +693,23 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
       const isSelf = msg.userId == user.id;
       const avatar = msg.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${msg.name}`;
       
-      let reactionsHtml = '';
+      let reactionsHtml = '<div class="flex gap-1 items-center flex-wrap">';
       if (msg.reactions && Object.keys(msg.reactions).length > 0) {
-        reactionsHtml = '<div class="flex gap-1 items-center flex-wrap">';
         for (const [emoji, uids] of Object.entries(msg.reactions)) {
           const isActive = uids.includes(parseInt(user.id));
-          reactionsHtml += `<div class="reaction-pill ${isActive ? 'active' : ''}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} <span>${uids.length}</span></div>`;
+          
+          // [FIX NAMA EMOT] Ambil nama user yang memberi emot
+          const reactedNames = uids.map(uid => {
+            const u = usersCache.find(x => String(x.id) === String(uid));
+            return u ? u.name : 'Unknown';
+          }).join(', ');
+          
+          reactionsHtml += `<div class="reaction-pill ${isActive ? 'active' : ''}" title="Dikasih emot oleh: ${reactedNames}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} <span>${uids.length}</span></div>`;
         }
-        reactionsHtml += '</div>';
       }
+      reactionsHtml += '</div>';
 
-      const pickerPos = isSelf ? 'right-0' : 'left-0';
+      const pickerPos = isSelf ? 'right-align' : '';
       
       const isFreshMsg = !isInitialLoad && !searchTerm && (Date.now() - parseInt(msg.timestamp) < 5000);
       const msgAnimClass = isFreshMsg ? 'msg-in' : '';
@@ -722,11 +727,11 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
                 `<img src="${msg.content}" class="chat-img" loading="lazy" onclick="viewImage('${msg.content}')">` :
                 `<div class="bg-[#18181b] px-4 py-2.5 rounded-2xl text-sm inline-block break-words border border-[#27272a]" style="border-top-left-radius: 2px;">${formatContent(msg.content)}</div>`
               }
+            </div>
+            <div class="msg-actions ${isSelf ? 'justify-end' : ''}">
               <div class="reaction-picker ${pickerPos}">
                 ${emojis.map(e => `<button onclick="toggleReaction('${msg.id}', '${e}')">${e}</button>`).join('')}
               </div>
-            </div>
-            <div class="msg-actions ${isSelf ? 'justify-end' : ''}">
               ${reactionsHtml}
               ${isSelf ? `<button onclick="deleteMessage('${msg.id}')" class="btn-delete-msg" title="Hapus Pesan"><i class="fas fa-trash"></i> Hapus</button>` : ''}
             </div>
@@ -899,7 +904,6 @@ function startNotifCheck() {
       lastNotifiedMsgId = latestMsg.id;
       const group = groupsCache.find(g => g.id === latestGroupId);
       
-      // [FITUR TAG NOTIF] Cek apakah user di-tag
       let isTagged = false;
       if (latestMsg.content) {
           const lowerContent = latestMsg.content.toLowerCase();
