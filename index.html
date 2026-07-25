@@ -352,14 +352,24 @@ fetch('https://api.ipify.org?format=json')
 
 // [FIX F5 CRASH] Fungsi pengaman agar JSON.parse tidak pernah crash walau data korup
 function safeParse(str, fallback) {
-  try { return JSON.parse(str) || fallback; } catch(e) { return fallback; }
+  try { 
+    const parsed = JSON.parse(str);
+    return parsed !== null ? parsed : fallback;
+  } catch(e) { return fallback; }
 }
 
 let usersCache = [];
 let messagesCache = [];
 let groupsCache = [];
-let lastReadCache = safeParse(localStorage.getItem('nc_lastread'), {});
-let deletedMsgIds = new Set(safeParse(localStorage.getItem('nc_deleted_msgs'), []));
+
+// KUNCI PERBAIKAN F5: Pastikan data Array/Object tidak rusak
+let lrObj = safeParse(localStorage.getItem('nc_lastread'), {});
+if (typeof lrObj !== 'object' || lrObj === null || Array.isArray(lrObj)) lrObj = {};
+let lastReadCache = lrObj;
+
+let delArr = safeParse(localStorage.getItem('nc_deleted_msgs'), []);
+if (!Array.isArray(delArr)) delArr = [];
+let deletedMsgIds = new Set(delArr);
 
 let lastRenderedMsgId = null;
 let currentGroupLogo = ''; 
@@ -504,7 +514,9 @@ async function showDashboard(user) {
   }
   
   // Gunakan data dari cache lokal agar instan dan aman dari F5
-  groupsCache = safeParse(localStorage.getItem('nc_groups'), []);
+  let gArr = safeParse(localStorage.getItem('nc_groups'), []);
+  if (!Array.isArray(gArr)) gArr = [];
+  groupsCache = gArr;
   renderGroups(); 
   
   fetchMessages();
@@ -668,10 +680,14 @@ async function fetchMessages() {
       messagesCache = [...validServerMsgs, ...localOnly];
       localStorage.setItem('nc_messages', JSON.stringify(messagesCache));
     } else {
-      messagesCache = safeParse(localStorage.getItem('nc_messages'), []).filter(m => !deletedMsgIds.has(m.id));
+      let mArr = safeParse(localStorage.getItem('nc_messages'), []);
+      if (!Array.isArray(mArr)) mArr = [];
+      messagesCache = mArr.filter(m => !deletedMsgIds.has(m.id));
     }
   } catch(e) {
-    messagesCache = safeParse(localStorage.getItem('nc_messages'), []).filter(m => !deletedMsgIds.has(m.id));
+    let mArr = safeParse(localStorage.getItem('nc_messages'), []);
+    if (!Array.isArray(mArr)) mArr = [];
+    messagesCache = mArr.filter(m => !deletedMsgIds.has(m.id));
   }
   if (activeGroupId) renderMessages();
 }
@@ -1258,36 +1274,45 @@ async function checkSession() {
   const sessionId = localStorage.getItem('nc_session');
   if (!sessionId) return;
 
-  // Ambil data dari lokal dengan aman (anti crash)
-  usersCache = safeParse(localStorage.getItem('nc_users'), []);
-  groupsCache = safeParse(localStorage.getItem('nc_groups'), []);
-  messagesCache = safeParse(localStorage.getItem('nc_messages'), []);
-  ensureAdminExists();
+  try {
+    let uArr = safeParse(localStorage.getItem('nc_users'), []);
+    if (!Array.isArray(uArr)) uArr = [];
+    usersCache = uArr;
+    
+    let gArr = safeParse(localStorage.getItem('nc_groups'), []);
+    if (!Array.isArray(gArr)) gArr = [];
+    groupsCache = gArr;
+    
+    let mArr = safeParse(localStorage.getItem('nc_messages'), []);
+    if (!Array.isArray(mArr)) mArr = [];
+    messagesCache = mArr;
+    
+    ensureAdminExists();
 
-  let user = usersCache.find(u => String(u.id) === String(sessionId));
-  
-  // Jika ada di lokal, LANGSUNG MASUK dashboard
-  if (user) {
-    showDashboard(user);
-  } else {
-    // Jika tidak ada di lokal (cache dibersihkan), coba fetch dari server
-    try {
-      const res = await fetch(`${API_URL}?action=getUsers`);
-      const d = await res.json();
-      if (Array.isArray(d)) {
-        usersCache = d;
-        ensureAdminExists();
-        localStorage.setItem('nc_users', JSON.stringify(usersCache));
-        user = usersCache.find(u => String(u.id) === String(sessionId));
-      }
-    } catch(e) {}
+    let user = usersCache.find(u => String(u.id) === String(sessionId));
+    
+    if (user) {
+      showDashboard(user);
+      return;
+    }
+    
+    // If not in local, fetch from server
+    const res = await fetch(`${API_URL}?action=getUsers`);
+    const d = await res.json();
+    if (Array.isArray(d)) {
+      usersCache = d;
+      ensureAdminExists();
+      localStorage.setItem('nc_users', JSON.stringify(usersCache));
+      user = usersCache.find(u => String(u.id) === String(sessionId));
+    }
     
     if (user) {
       showDashboard(user);
     } else {
-      // Jika server juga tidak ada, baru clear session
       localStorage.removeItem('nc_session');
     }
+  } catch(e) {
+    console.error("Session error:", e);
   }
 }
 checkSession();
