@@ -504,13 +504,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   showDashboard();
 });
 
+// [FIX F5 LOGOUT TOTAL] Tanpa location.reload() yang bikin hilang sesi
 async function showDashboard() {
-  document.getElementById('loginView').classList.add('hidden');
-  document.getElementById('dashboardView').classList.remove('hidden');
   const sessionId = localStorage.getItem('nc_session');
   let user = usersCache.find(u => String(u.id) === String(sessionId));
   
-  // [FIX F5 LOGOUT] Jika user tidak ada di cache karena baru di-refresh, coba fetch ulang
   if (!user) {
     try {
       const res = await fetch(`${API_URL}?action=getUsers`);
@@ -524,12 +522,15 @@ async function showDashboard() {
     } catch(e) {}
   }
 
-  // Jika setelah fetch tetap tidak ada (misal koneksi putus), paksa logout.
   if (!user) {
     localStorage.removeItem('nc_session');
-    location.reload();
+    document.getElementById('loginView').classList.remove('hidden');
+    document.getElementById('dashboardView').classList.add('hidden');
     return;
   }
+  
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('dashboardView').classList.remove('hidden');
   
   document.getElementById('userName').textContent = user.name;
   document.getElementById('userRole').textContent = user.role.toUpperCase() + ' • Online';
@@ -769,7 +770,6 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
       const isFreshMsg = !isInitialLoad && !searchTerm && (Date.now() - parseInt(msg.timestamp) < 5000);
       const msgAnimClass = isFreshMsg ? 'msg-in' : '';
       
-      // [FIX TOMBOL CHAT SENDIRI] Hanya tampilkan Balas & Emot untuk chat orang lain
       let actionsHtml = `<div class="msg-actions-row ${isSelf ? 'justify-end' : ''}">`;
       if (!isSelf) {
         actionsHtml += `<button class="action-icon-btn" onclick="replyMessage('${msg.id}')" title="Balas"><i class="fas fa-reply"></i> Balas</button>`;
@@ -1291,41 +1291,38 @@ async function adminDeleteGroup() {
   showToast('Group berhasil dihapus', 'success');
 }
 
-// [FIX F5 LOGOUT TOTAL] Cek sesi sebelum fetch data, agar tidak mudah logout
 async function checkSession() {
   const sessionId = localStorage.getItem('nc_session');
-  if (sessionId) {
-    // Ambil dari local storage dulu agar instan dan tidak logout saat koneksi lambat
-    usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
-    ensureAdminExists();
-    
-    groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
-    messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
-    
-    let user = usersCache.find(u => String(u.id) === String(sessionId));
+  if (!sessionId) return;
+
+  // [FIX F5 LOGOUT TOTAL] Langsung ambil dari lokal dulu, biar tidak nunggu server
+  usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
+  groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
+  messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
+  ensureAdminExists();
+
+  let user = usersCache.find(u => String(u.id) === String(sessionId));
+  
+  // Jika ada di lokal, LANGSUNG MASUK dashboard
+  if (user) {
+    showDashboard();
+  } else {
+    // Jika tidak ada di lokal (cache dibersihkan), coba fetch dari server
+    try {
+      const res = await fetch(`${API_URL}?action=getUsers`);
+      const d = await res.json();
+      if (Array.isArray(d)) {
+        usersCache = d;
+        ensureAdminExists();
+        localStorage.setItem('nc_users', JSON.stringify(usersCache));
+        user = usersCache.find(u => String(u.id) === String(sessionId));
+      }
+    } catch(e) {}
     
     if (user) {
-      // Jika user ada di local, langsung masuk dashboard
       showDashboard();
     } else {
-      // Jika tidak ada di local (misal cache dibersihkan), coba fetch dari server
-      try {
-        const res = await fetch(`${API_URL}?action=getUsers`);
-        const d = await res.json();
-        if (Array.isArray(d)) {
-          usersCache = d;
-          ensureAdminExists();
-          localStorage.setItem('nc_users', JSON.stringify(usersCache));
-          user = usersCache.find(u => String(u.id) === String(sessionId));
-        }
-      } catch(e) {}
-      
-      if (user) {
-        showDashboard();
-      } else {
-        // Jika server juga tidak ada, baru logout
-        localStorage.removeItem('nc_session');
-      }
+      localStorage.removeItem('nc_session');
     }
   }
 }
