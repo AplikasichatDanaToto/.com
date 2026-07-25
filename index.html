@@ -76,6 +76,8 @@
   
   .online-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; border: 2px solid #0d0d12; position: absolute; bottom: 0; right: 0; animation: pulse 2s infinite; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+  
+  .login-bg-custom { background-size: cover; background-position: center; }
 </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -93,11 +95,17 @@
         <form id="loginForm" class="space-y-4">
           <div>
             <label class="text-xs text-gray-400 ml-1 mb-1 block">Username</label>
-            <input type="text" id="loginUsername" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Masukkan username" required>
+            <div class="relative">
+              <i class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+              <input type="text" id="loginUsername" class="input-style w-full pl-10 pr-4 py-3 rounded-lg" placeholder="Masukkan username" required>
+            </div>
           </div>
           <div>
             <label class="text-xs text-gray-400 ml-1 mb-1 block">Password</label>
-            <input type="password" id="loginPassword" class="input-style w-full px-4 py-3 rounded-lg" placeholder="Masukkan password" required>
+            <div class="relative">
+              <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+              <input type="password" id="loginPassword" class="input-style w-full pl-10 pr-4 py-3 rounded-lg" placeholder="Masukkan password" required>
+            </div>
           </div>
           <div id="loginError" class="hidden text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-2">
             <i class="fas fa-exclamation-circle"></i><span id="loginErrorMsg">Password salah!</span>
@@ -279,13 +287,24 @@
         </div>
       </div>
     </div>
-  </div>
+  </div> 
 
   <div id="imageViewerModal" class="hidden fixed inset-0 bg-black/95 z-[60] flex items-center justify-center p-8 cursor-pointer" onclick="closeModal('imageViewerModal')"><img id="imageViewerSrc" class="max-w-full max-h-full object-contain rounded-lg" src=""></div>
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbxucP3mlhbtew6I62dK38DzXp3OU6aOyehh-jV0ILGRI3KyrhouCXARr8vJ8zLEBtL1/exec';
+// =======================================================
+// PASTE LINK GAMBAR BACKGROUND LUAR DI BAWAH INI:
+// =======================================================
+const LOGIN_BG_URL = 'https://drive.google.com/thumbnail?id=1p6fDhpOfl6dtj-IkM7ZQ4HtxROPEOCcv&sz=w1920-h1080';
+// =======================================================
+
+const API_URL = 'https://script.google.com/macros/s/AKfycbyO-lCWJeRSXcHa0pGhYYgDci376Yxgk_VfKVpgYN7LjJIYGUoVh5oLkh9_N5V6LQql/exec';
+
+if (LOGIN_BG_URL) {
+  document.getElementById('loginView').style.backgroundImage = `url('${LOGIN_BG_URL}')`;
+  document.getElementById('loginView').classList.add('login-bg-custom');
+}
 
 let currentIP = 'Memuat...';
 fetch('https://api.ipify.org?format=json')
@@ -677,7 +696,10 @@ function renderMessages(searchTerm = '') {
                 ${emojis.map(e => `<button onclick="toggleReaction('${msg.id}', '${e}')">${e}</button>`).join('')}
               </div>
             </div>
-            ${reactionsHtml}
+            <div class="flex gap-2 mt-1 items-center ${isSelf ? 'justify-end' : ''}">
+              ${reactionsHtml}
+              ${isSelf ? `<button onclick="deleteMessage('${msg.id}')" class="text-[10px] text-gray-600 hover:text-red-400 transition-colors px-1" title="Hapus Pesan"><i class="fas fa-trash"></i></button>` : ''}
+            </div>
           </div>
         </div>`;
     });
@@ -691,6 +713,14 @@ function renderMessages(searchTerm = '') {
       el.innerHTML = el.innerHTML.replace(regex, '<span class="highlight">$1</span>');
     });
   }
+}
+
+async function deleteMessage(msgId) {
+  if (!confirm('Hapus pesan ini?')) return;
+  messagesCache = messagesCache.filter(m => m.id !== msgId);
+  renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : '');
+  apiPost({ action: 'deleteMessage', id: msgId });
+  showToast('Pesan dihapus', 'success');
 }
 
 async function toggleReaction(msgId, emoji) {
