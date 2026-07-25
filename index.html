@@ -350,17 +350,21 @@ fetch('https://api.ipify.org?format=json')
   .then(data => { currentIP = data.ip; document.getElementById('ipDisplay').textContent = currentIP; })
   .catch(() => { currentIP = 'Unknown'; document.getElementById('ipDisplay').textContent = 'Gagal deteksi'; });
 
+// [FIX F5 CRASH] Fungsi pengaman agar JSON.parse tidak pernah crash walau data korup
+function safeParse(str, fallback) {
+  try { return JSON.parse(str) || fallback; } catch(e) { return fallback; }
+}
+
 let usersCache = [];
 let messagesCache = [];
 let groupsCache = [];
-let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
+let lastReadCache = safeParse(localStorage.getItem('nc_lastread'), {});
+let deletedMsgIds = new Set(safeParse(localStorage.getItem('nc_deleted_msgs'), []));
 
 let lastRenderedMsgId = null;
 let currentGroupLogo = ''; 
 let lastNotifiedMsgId = null;
 let replyToData = null;
-
-let deletedMsgIds = new Set(JSON.parse(localStorage.getItem('nc_deleted_msgs') || '[]'));
 
 function ensureAdminExists() {
   if (!usersCache.find(u => u.username === 'admin')) {
@@ -476,6 +480,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
 async function showDashboard(user) {
   if (!user) {
+    localStorage.removeItem('nc_session');
     document.getElementById('loginView').classList.remove('hidden');
     document.getElementById('dashboardView').classList.add('hidden');
     return;
@@ -498,14 +503,14 @@ async function showDashboard(user) {
     Notification.requestPermission();
   }
   
-  // Pakai data lokal dulu agar instan dan tidak mental saat F5
-  groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
+  // Gunakan data dari cache lokal agar instan dan aman dari F5
+  groupsCache = safeParse(localStorage.getItem('nc_groups'), []);
   renderGroups(); 
   
   fetchMessages();
   startNotifCheck();
   
-  // Update data dari server di background dengan aman (tanpa hapus lokal jika server kosong)
+  // Update data dari server di background
   syncServerData();
 }
 
@@ -663,10 +668,10 @@ async function fetchMessages() {
       messagesCache = [...validServerMsgs, ...localOnly];
       localStorage.setItem('nc_messages', JSON.stringify(messagesCache));
     } else {
-      messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]').filter(m => !deletedMsgIds.has(m.id));
+      messagesCache = safeParse(localStorage.getItem('nc_messages'), []).filter(m => !deletedMsgIds.has(m.id));
     }
   } catch(e) {
-    messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]').filter(m => !deletedMsgIds.has(m.id));
+    messagesCache = safeParse(localStorage.getItem('nc_messages'), []).filter(m => !deletedMsgIds.has(m.id));
   }
   if (activeGroupId) renderMessages();
 }
@@ -1253,15 +1258,15 @@ async function checkSession() {
   const sessionId = localStorage.getItem('nc_session');
   if (!sessionId) return;
 
-  // [FIX F5 LOGOUT TOTAL] Langsung ambil dari lokal dulu, biar tidak nunggu server
-  usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
-  groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
-  messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
+  // Ambil data dari lokal dengan aman (anti crash)
+  usersCache = safeParse(localStorage.getItem('nc_users'), []);
+  groupsCache = safeParse(localStorage.getItem('nc_groups'), []);
+  messagesCache = safeParse(localStorage.getItem('nc_messages'), []);
   ensureAdminExists();
 
   let user = usersCache.find(u => String(u.id) === String(sessionId));
   
-  // Jika ada di lokal, LANGSUNG MASUK dashboard tanpa reload
+  // Jika ada di lokal, LANGSUNG MASUK dashboard
   if (user) {
     showDashboard(user);
   } else {
