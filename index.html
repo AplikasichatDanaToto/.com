@@ -84,6 +84,8 @@
   .gif-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 4px; cursor: pointer; transition: transform 0.1s; }
   .gif-item img:hover { transform: scale(1.05); }
   
+  .action-btn { z-index: 5; position: relative; pointer-events: auto; }
+  
   .online-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; border: 2px solid #0d0d12; position: absolute; bottom: 0; right: 0; animation: pulse 2s infinite; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
   
@@ -227,7 +229,7 @@
     </div>
   </div>
 
-  <!-- TAMBAHAN: input hidden untuk upload gambar chat -->
+  <!-- Tambahan input file untuk chat image -->
   <input type="file" id="imageInput" class="hidden" accept="image/*">
 
   <div id="profileModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
@@ -337,7 +339,7 @@
 // =======================================================
 // PASTE LINK GAMBAR BACKGROUND LUAR DI BAWAH INI:
 // =======================================================
-const LOGIN_BG_URL = '';
+const LOGIN_BG_URL = ''; // Contoh: 'https://wallpapercave.com/wp/wp12345.jpg'
 // =======================================================
 
 const API_URL = 'https://script.google.com/macros/s/AKfycby3TVAZ_350S6dfV7ZFjO9uSmNYquHNVi-H4YZ0qgYlBqobpU8yKeb2etZMKGuKm406/exec';
@@ -438,6 +440,7 @@ async function fetchGroups() {
     if (Array.isArray(data)) {
       groupsCache = mergeData(groupsCache, data, 'id');
       localStorage.setItem('nc_groups', JSON.stringify(groupsCache));
+      if (isDashboardActive) renderGroups(); // Update UI instan saat data server datang
     }
   } catch(e) {
     console.error('fetchGroups error:', e);
@@ -526,8 +529,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   showDashboard(user);
 });
 
-// [FIX F5 & GROUP LANGSUNG MUNCUL] showDashboard sekarang fetch data dari server dulu
-async function showDashboard(user) {
+// [FIX UTAMA DELAY] showDashboard sekarang TIDAK menunggu fetch server. Langsung tampil instan dari cache lokal!
+function showDashboard(user) {
   if (!user) {
     localStorage.removeItem('nc_session');
     document.getElementById('loginView').classList.remove('hidden');
@@ -545,21 +548,17 @@ async function showDashboard(user) {
       Notification.requestPermission();
     }
     
-    // [FIX] Fetch SEMUA data dari server sebelum render (agar group langsung muncul)
-    await fetchUsers();
-    await fetchGroups();
+    // 1. Langsung render UI dan Groups dari data lokal (INSTAN, 0.1 detik)
+    updateDashboardUI(user);
     
-    // Re-find user dengan data terbaru dari server
-    const sessionId = localStorage.getItem('nc_session');
-    if (sessionId) {
-      const updatedUser = usersCache.find(u => String(u.id) === String(sessionId));
-      if (updatedUser) user = updatedUser;
-    }
-    
-    fetchMessages();
-    startNotifCheck();
+    // 2. Fetch data dari server di BEKALANG (non-blocking). Jika ada group baru, akan otomatis masuk list.
+    syncServerData();
+  } else {
+    updateDashboardUI(user);
   }
-  
+}
+
+function updateDashboardUI(user) {
   document.getElementById('userName').textContent = user.name;
   document.getElementById('userRole').textContent = user.role.toUpperCase() + ' • Online';
   document.getElementById('userAvatarHeader').src = user.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${user.name}`;
@@ -584,8 +583,33 @@ async function showDashboard(user) {
     );
     if (myGroups.length > 0) {
       selectGroup(myGroups[0].id);
+    } else {
+      // Tampilan jika belum ada group
+      document.getElementById('chatHeader').innerHTML = '';
+      document.getElementById('messagesContainer').innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-700"><i class="fas fa-comment-slash text-5xl mb-4"></i><p class="text-sm font-medium">Anda belum tergabung di group manapun.</p></div>`;
+      document.getElementById('messageInput').disabled = true;
+      document.getElementById('sendBtn').disabled = true;
+      document.getElementById('uploadImgBtn').disabled = true;
+      document.getElementById('pickerBtn').disabled = true;
     }
   }
+}
+
+// Proses sinkronisasi server yang berjalan di background (tidak menghentikan UI)
+async function syncServerData() {
+  await Promise.all([fetchUsers(), fetchGroups()]);
+  
+  // Update UI jika user data berubah dari server
+  const sessionId = localStorage.getItem('nc_session');
+  if (sessionId) {
+    const updatedUser = usersCache.find(u => String(u.id) === String(sessionId));
+    if (updatedUser) {
+      updateDashboardUI(updatedUser);
+    }
+  }
+  
+  fetchMessages();
+  startNotifCheck();
 }
 
 document.getElementById('logoutBtn').addEventListener('click', () => { 
@@ -659,10 +683,10 @@ function renderGroups() {
           <span class="text-[10px] text-gray-600">${memberCount} anggota</span>
         </div>
         <div class="flex items-center gap-1 flex-shrink-0 z-10 relative">
-          <button class="p-2 rounded-md hover:bg-white/10 text-gray-500 hover:text-white transition-colors" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan">
+          <button class="action-btn w-7 h-7 flex items-center justify-center text-gray-700 hover:text-white" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan">
             <i class="fas fa-thumbtack text-xs ${isPinned ? 'text-green-400' : ''}"></i>
           </button>
-          ${isLeader ? `<button class="p-2 rounded-md hover:bg-white/10 text-gray-500 hover:text-white transition-colors" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')" title="Kelola"><i class="fas fa-cog text-xs"></i></button>` : ''}
+          ${isLeader ? `<button class="action-btn w-7 h-7 flex items-center justify-center text-gray-700 hover:text-white" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')" title="Kelola"><i class="fas fa-cog text-xs"></i></button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -1337,9 +1361,9 @@ async function adminDeleteGroup() {
 }
 
 // [FIX UTAMA F5] initializeApp sekarang TIDAK PERNAH hapus session
-// Dan menggunakan MERGE data (server + lokal) bukan REPLACE
+// Dan langsung masuk dashboard menggunakan data local (INSTAN)
 async function initializeApp() {
-  // 1. Load local cache dengan aman
+  // 1. Load local cache dengan aman (Eksekusi Syncronous, 0.1 detik)
   let uArr = safeParse(localStorage.getItem('nc_users'), []);
   if (!Array.isArray(uArr)) uArr = [];
   usersCache = uArr;
@@ -1361,11 +1385,10 @@ async function initializeApp() {
   let user = usersCache.find(u => String(u.id) === String(sessionId));
 
   if (user) {
-    // User ditemukan di lokal - LANGSUNG masuk dashboard
-    // showDashboard akan fetch data terbaru dari server (merge, bukan replace)
+    // User ditemukan di lokal - LANGSUNG masuk dashboard (INSTAN)
     showDashboard(user);
   } else {
-    // User tidak di lokal (mungkin incognito) - fetch dari server dulu
+    // User tidak di lokal (misal incognito) - fetch dari server dulu
     await fetchUsers();
     await fetchGroups();
     
@@ -1373,8 +1396,6 @@ async function initializeApp() {
     if (user) {
       showDashboard(user);
     }
-    // Jika masih tidak ketemu, JANGAN hapus session (server mungkin down)
-    // Biarkan user tetap di login page
   }
 }
 
