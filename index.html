@@ -61,7 +61,7 @@
   .reaction-picker button { font-size: 18px; padding: 2px 4px; border-radius: 50%; transition: transform 0.1s; background: transparent; border: none; cursor: pointer; }
   .reaction-picker button:hover { transform: scale(1.3); background: #3f3f46; }
   
-  .reaction-pill { background: #18181b; border: 1px solid #3f3f46; font-size: 12px; padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; margin-top: 4px; color: #a1a1aa; }
+  .reaction-pill { background: #18181b; border: 1px solid #3f3f46; font-size: 12px; padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: #a1a1aa; }
   .reaction-pill:hover { border-color: #fff; }
   .reaction-pill.active { background: #22c55e; border-color: #22c55e; color: #000; font-weight: bold; }
 
@@ -79,9 +79,13 @@
   
   .login-bg-custom { background-size: cover; background-position: center; }
 
-  /* [FIX TOMBOL HAPUS TERANG] */
-  .btn-delete-msg { color: #a1a1aa; transition: all 0.2s; padding: 2px 6px; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; }
+  /* [FIX TOMBOL HAPUS & REAKSI SEJAJAR] */
+  .msg-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .btn-delete-msg { color: #a1a1aa; transition: all 0.2s; padding: 2px 6px; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; background: transparent; border: none; }
   .btn-delete-msg:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+
+  /* [FITUR TAG] */
+  .tag-highlight { color: #60a5fa; background: rgba(59, 130, 246, 0.1); padding: 1px 4px; border-radius: 4px; font-weight: 600; }
 </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -323,9 +327,8 @@ let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 
 let lastRenderedMsgId = null;
 let currentGroupLogo = ''; 
-let lastNotifiedMsgId = null; // [FIX NOTIF] Track pesan terakhir yang dinotif agar tidak spam
+let lastNotifiedMsgId = null;
 
-// [FIX PERMANEN] Simpan ID pesan yang dihapus ke LocalStorage agar tidak muncul lagi saat di-Refresh (F5)
 let deletedMsgIds = new Set(JSON.parse(localStorage.getItem('nc_deleted_msgs') || '[]'));
 
 function ensureAdminExists() {
@@ -389,6 +392,15 @@ function showToast(msg, type='info') {
 }
 
 function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+// [FITUR TAG] Fungsi untuk merubah @all atau @username menjadi berwarna biru
+function formatContent(content) {
+  let safeContent = escapeHtml(content);
+  // Regex untuk mendeteksi @ diikuti huruf/angka
+  safeContent = safeContent.replace(/(@[a-zA-Z0-9_]+)/g, '<span class="tag-highlight">$1</span>');
+  return safeContent;
+}
+
 function formatTime(ts) { return new Date(parseInt(ts)).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }); }
 function compressImage(file, maxSize, callback) {
   const reader = new FileReader();
@@ -482,7 +494,6 @@ async function showDashboard() {
     document.getElementById('adminPanel').classList.remove('hidden');
   }
   
-  // [FIX NOTIF] Minta izin notifikasi browser saat masuk dashboard
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
   }
@@ -685,7 +696,7 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
       
       let reactionsHtml = '';
       if (msg.reactions && Object.keys(msg.reactions).length > 0) {
-        reactionsHtml = '<div class="flex gap-1 mt-2 flex-wrap">';
+        reactionsHtml = '<div class="flex gap-1 items-center flex-wrap">';
         for (const [emoji, uids] of Object.entries(msg.reactions)) {
           const isActive = uids.includes(parseInt(user.id));
           reactionsHtml += `<div class="reaction-pill ${isActive ? 'active' : ''}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} <span>${uids.length}</span></div>`;
@@ -709,13 +720,13 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
             <div class="relative">
               ${msg.type === 'image' || msg.type === 'gif' ? 
                 `<img src="${msg.content}" class="chat-img" loading="lazy" onclick="viewImage('${msg.content}')">` :
-                `<div class="bg-[#18181b] px-4 py-2.5 rounded-2xl text-sm inline-block break-words border border-[#27272a]" style="border-top-left-radius: 2px;">${escapeHtml(msg.content)}</div>`
+                `<div class="bg-[#18181b] px-4 py-2.5 rounded-2xl text-sm inline-block break-words border border-[#27272a]" style="border-top-left-radius: 2px;">${formatContent(msg.content)}</div>`
               }
               <div class="reaction-picker ${pickerPos}">
                 ${emojis.map(e => `<button onclick="toggleReaction('${msg.id}', '${e}')">${e}</button>`).join('')}
               </div>
             </div>
-            <div class="flex gap-2 mt-1 items-center ${isSelf ? 'justify-end' : ''}">
+            <div class="msg-actions ${isSelf ? 'justify-end' : ''}">
               ${reactionsHtml}
               ${isSelf ? `<button onclick="deleteMessage('${msg.id}')" class="btn-delete-msg" title="Hapus Pesan"><i class="fas fa-trash"></i> Hapus</button>` : ''}
             </div>
@@ -884,19 +895,37 @@ function startNotifCheck() {
     });
     
     const notifBar = document.getElementById('notifBar');
-    // [FIX NOTIF GROUP] Tampilkan notif browser dan banner jika ada pesan baru
     if (latestMsg && latestMsg.id !== lastNotifiedMsgId) {
       lastNotifiedMsgId = latestMsg.id;
       const group = groupsCache.find(g => g.id === latestGroupId);
-      document.getElementById('notifText').textContent = `Pesan baru di ${group.name} dari ${latestMsg.name}`;
+      
+      // [FITUR TAG NOTIF] Cek apakah user di-tag
+      let isTagged = false;
+      if (latestMsg.content) {
+          const lowerContent = latestMsg.content.toLowerCase();
+          if (lowerContent.includes('@all') || lowerContent.includes(`@${user.username.toLowerCase()}`) || lowerContent.includes(`@${user.name.toLowerCase()}`)) {
+              isTagged = true;
+          }
+      }
+      
+      let notifText = '';
+      let browserNotifTitle = '';
+      if (isTagged) {
+          notifText = `Anda disebut di ${group.name} oleh ${latestMsg.name}`;
+          browserNotifTitle = `Anda disebut di ${group.name}`;
+      } else {
+          notifText = `Pesan baru di ${group.name} dari ${latestMsg.name}`;
+          browserNotifTitle = `Pesan baru di ${group.name}`;
+      }
+      
+      document.getElementById('notifText').textContent = notifText;
       notifBar.classList.remove('hidden');
       notifBar.classList.add('flex');
       notifBar.dataset.targetGroup = latestGroupId;
 
-      // Browser Notification
       if ('Notification' in window && Notification.permission === 'granted') {
         try {
-          new Notification(`Pesan baru di ${group.name}`, { 
+          new Notification(browserNotifTitle, { 
             body: latestMsg.type === 'text' ? `${latestMsg.name}: ${latestMsg.content}` : `${latestMsg.name} mengirim media`,
             icon: latestMsg.avatar || 'https://lh3.googleusercontent.com/d/1JxvqFXKhF56O6ww8YTn-8iV3byNHvyu2'
           });
