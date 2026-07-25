@@ -524,6 +524,7 @@ async function showDashboard() {
     } catch(e) {}
   }
 
+  // Jika setelah fetch tetap tidak ada (misal koneksi putus), paksa logout.
   if (!user) {
     localStorage.removeItem('nc_session');
     location.reload();
@@ -1290,31 +1291,41 @@ async function adminDeleteGroup() {
   showToast('Group berhasil dihapus', 'success');
 }
 
+// [FIX F5 LOGOUT TOTAL] Cek sesi sebelum fetch data, agar tidak mudah logout
 async function checkSession() {
-  if (localStorage.getItem('nc_session')) {
+  const sessionId = localStorage.getItem('nc_session');
+  if (sessionId) {
+    // Ambil dari local storage dulu agar instan dan tidak logout saat koneksi lambat
     usersCache = JSON.parse(localStorage.getItem('nc_users') || '[]');
     ensureAdminExists();
     
     groupsCache = JSON.parse(localStorage.getItem('nc_groups') || '[]');
     messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
     
-    let user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
+    let user = usersCache.find(u => String(u.id) === String(sessionId));
     
-    if (!user) {
+    if (user) {
+      // Jika user ada di local, langsung masuk dashboard
+      showDashboard();
+    } else {
+      // Jika tidak ada di local (misal cache dibersihkan), coba fetch dari server
       try {
         const res = await fetch(`${API_URL}?action=getUsers`);
         const d = await res.json();
-        usersCache = Array.isArray(d) ? d : [];
-        ensureAdminExists();
-        if (usersCache.length > 0) localStorage.setItem('nc_users', JSON.stringify(usersCache));
-        user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
+        if (Array.isArray(d)) {
+          usersCache = d;
+          ensureAdminExists();
+          localStorage.setItem('nc_users', JSON.stringify(usersCache));
+          user = usersCache.find(u => String(u.id) === String(sessionId));
+        }
       } catch(e) {}
-    }
-    
-    if (user) {
-      showDashboard();
-    } else {
-      localStorage.removeItem('nc_session');
+      
+      if (user) {
+        showDashboard();
+      } else {
+        // Jika server juga tidak ada, baru logout
+        localStorage.removeItem('nc_session');
+      }
     }
   }
 }
