@@ -319,7 +319,7 @@ let lastReadCache = JSON.parse(localStorage.getItem('nc_lastread') || '{}');
 
 let lastRenderedMsgId = null;
 let currentGroupLogo = ''; 
-let animatedMsgIds = new Set(); // [FIX GONCANG] Track pesan yang sudah dianimasi
+let deletedMsgIds = new Set(); // [FIX GHOST MESSAGE] Menyimpan ID pesan yang dihapus agar tidak dimuat lagi dari server
 
 function ensureAdminExists() {
   if (!usersCache.find(u => u.username === 'admin')) {
@@ -584,7 +584,7 @@ async function togglePinGroup(gid) {
 }
 
 function getUnreadCount(gid, uid) {
-  const msgs = messagesCache.filter(m => m.groupId === gid);
+  const msgs = messagesCache.filter(m => m.groupId === gid && !deletedMsgIds.has(m.id));
   const lastRead = lastReadCache[`${uid}_${gid}`] || 0;
   return msgs.filter(m => parseInt(m.timestamp) > lastRead).length;
 }
@@ -599,9 +599,8 @@ function selectGroup(id) {
   document.getElementById('uploadImgBtn').disabled = false;
   document.getElementById('pickerBtn').disabled = false;
   lastRenderedMsgId = null; 
-  animatedMsgIds.clear(); // [FIX GONCANG] Bersihkan cache animasi saat ganti group
   renderGroups();
-  renderMessages();
+  renderMessages('', true); // isInitialLoad = true agar tidak animasi semua chat lama
   updateChatHeader();
 }
 
@@ -629,23 +628,25 @@ async function fetchMessages() {
     const res = await fetch(`${API_URL}?action=getMessages`);
     const data = await res.json();
     if (Array.isArray(data)) {
-      const serverIds = new Set(data.map(m => m.id));
-      const localOnly = messagesCache.filter(m => !serverIds.has(m.id) && (Date.now() - parseInt(m.timestamp) < 15000));
-      messagesCache = [...data, ...localOnly];
+      // [FIX GHOST MESSAGE] Filter pesan yang sudah ditandai dihapus
+      const validServerMsgs = data.filter(m => !deletedMsgIds.has(m.id));
+      const serverIds = new Set(validServerMsgs.map(m => m.id));
+      const localOnly = messagesCache.filter(m => !serverIds.has(m.id) && !deletedMsgIds.has(m.id) && (Date.now() - parseInt(m.timestamp) < 15000));
+      messagesCache = [...validServerMsgs, ...localOnly];
       localStorage.setItem('nc_messages', JSON.stringify(messagesCache));
     } else {
-      messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
+      messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]').filter(m => !deletedMsgIds.has(m.id));
     }
   } catch(e) {
-    messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]');
+    messagesCache = JSON.parse(localStorage.getItem('nc_messages') || '[]').filter(m => !deletedMsgIds.has(m.id));
   }
   if (activeGroupId) renderMessages();
 }
 
-function renderMessages(searchTerm = '') {
+function renderMessages(searchTerm = '', isInitialLoad = false) {
   const container = document.getElementById('messagesContainer');
   const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
-  let msgs = messagesCache.filter(m => m.groupId === activeGroupId);
+  let msgs = messagesCache.filter(m => m.groupId === activeGroupId && !deletedMsgIds.has(m.id));
   
   if (searchTerm) {
     const term = searchTerm.toLowerCase();
@@ -684,9 +685,9 @@ function renderMessages(searchTerm = '') {
 
       const pickerPos = isSelf ? 'right-0' : 'left-0';
       
-      // [FIX GONCANG] Hanya beri kelas msg-in jika pesan ini belum pernah dirender sebelumnya
-      const msgAnimClass = animatedMsgIds.has(msg.id) ? '' : 'msg-in';
-      animatedMsgIds.add(msg.id);
+      // [FIX GONCANG] Animasi hanya untuk pesan baru (umur < 5 detik) dan bukan saat initial load / search
+      const isFreshMsg = !isInitialLoad && !searchTerm && (Date.now() - parseInt(msg.timestamp) < 5000);
+      const msgAnimClass = isFreshMsg ? 'msg-in' : '';
       
       html += `
         <div id="msg-${msg.id}" class="msg-group ${msgAnimClass} flex gap-3 mb-6 ${isSelf ? 'flex-row-reverse' : ''}">
@@ -728,22 +729,16 @@ function renderMessages(searchTerm = '') {
   }
 }
 
-// [FIX HAPUS LAMA] Langsung hilang tanpa render ulang yang bikin goncang
+// [FIX HAPUS PERMANEN] Tandai ID pesan agar tidak pernah dimuat lagi dari server
 async function deleteMessage(msgId) {
   if (!confirm('Hapus pesan ini?')) return;
-  messagesCache = messagesCache.filter(m => m.id !== msgId);
-  animatedMsgIds.delete(msgId);
   
-  const el = document.getElementById('msg-' + msgId);
-  if (el) {
-    el.style.transition = 'opacity 0.2s, transform 0.2s';
-    el.style.opacity = '0';
-    el.style.transform = 'scale(0.8)';
-    setTimeout(() => el.remove(), 200);
-  }
+  deletedMsgIds.add(msgId); // Kunci ID ini
+  messagesCache = messagesCache.filter(m => m.id !== msgId); // Hapus dari cache lokal
+  renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : ''); // Render ulang tanpa pesan itu
   
-  apiPost({ action: 'deleteMessage', id: msgId });
-  showToast('Pesan dihapus', 'success');
+  apiPost({ action: 'deleteMessage', id: msgId }); // Kirim perintah hapus ke server
+  showToast('Pesan dihapus permanen', 'success');
 }
 
 async function toggleReaction(msgId, emoji) {
@@ -870,7 +865,7 @@ function startNotifCheck() {
     let latestMsg = null, latestGroupId = null;
     groupsCache.forEach(g => {
       if (g.id === activeGroupId) return;
-      const msgs = messagesCache.filter(m => m.groupId === g.id);
+      const msgs = messagesCache.filter(m => m.groupId === g.id && !deletedMsgIds.has(m.id));
       const lastRead = lastReadCache[`${user.id}_${g.id}`] || 0;
       const newMsgs = msgs.filter(m => parseInt(m.timestamp) > lastRead);
       if (newMsgs.length > 0) {
