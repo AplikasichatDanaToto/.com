@@ -69,7 +69,7 @@
   .reaction-picker { 
     position: absolute; top: 50%; transform: translateY(-50%);
     right: 120%; margin-right: 8px; background: #18181b; border: 1px solid #52525b; 
-    border-radius: 20px; padding: 4px 6px; display: flex; gap: 4px; z-index: 20; 
+    border-radius: 20px; padding: 4px 6px; display: flex; gap: 4px; z-index: 30; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
   }
   .reaction-picker.right-align { right: auto; left: 120%; margin-right: 0; margin-left: 8px; }
@@ -362,7 +362,6 @@ function safeParse(str, fallback) {
   } catch(e) { return fallback; }
 }
 
-// PERBAIKAN: Hapus pesan lokal yang sudah tidak ada di server (misal sudah dihapus admin)
 function mergeData(localArr, serverArr, key = 'id') {
   const map = new Map();
   if (Array.isArray(serverArr)) {
@@ -377,7 +376,6 @@ function mergeData(localArr, serverArr, key = 'id') {
       if (item && item[key] !== undefined && item[key] !== null) {
         const idStr = String(item[key]);
         if (!map.has(idStr)) {
-          // Hanya simpan pesan lokal jika umurnya kurang dari 15 detik (belum tersinkron)
           if (item.timestamp && (Date.now() - parseInt(item.timestamp) < 15000)) {
              map.set(idStr, item);
           }
@@ -588,7 +586,6 @@ function showDashboard(user) {
     document.getElementById('dashboardView').classList.remove('hidden');
     isDashboardActive = true;
     
-    // PERBAIKAN NOTIFIKASI: Meminta izin notifikasi browser
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
@@ -829,8 +826,20 @@ async function fetchMessages() {
     const actualData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
     if (actualData.length > 0) {
       const validServerMsgs = actualData.filter(m => {
-        // PERBAIKAN UTAMA: Cek instruksi hapus dari reaksi 'deleted'
-        if (m.reactions && m.reactions.deleted) {
+        // 1. Buang pesan System sampah dari percobaan sebelumnya
+        if (m.name === 'System' || m.type === 'delete') {
+          return false;
+        }
+        
+        // 2. Parse reactions dengan AMAN (server sering kirim string)
+        let reactions = m.reactions;
+        if (typeof reactions === 'string') {
+          try { reactions = JSON.parse(reactions); } catch(e) { reactions = {}; }
+        }
+        if (!reactions || typeof reactions !== 'object') reactions = {};
+        
+        // 3. Cek instruksi hapus dari reactions
+        if (reactions.deleted === true || reactions.deleted === "true") {
           if (!deletedMsgIds.has(m.id)) {
             deletedMsgIds.add(m.id);
             localStorage.setItem('nc_deleted_msgs', JSON.stringify([...deletedMsgIds]));
@@ -838,11 +847,17 @@ async function fetchMessages() {
           }
           return false;
         }
-        return !deletedMsgIds.has(m.id);
+        
+        // 4. Jika pesan sudah dihapus lokal, abaikan
+        if (deletedMsgIds.has(m.id)) return false;
+        
+        // 5. Update reactions secara aman
+        m.reactions = reactions;
+        return true;
       });
       
       const serverIds = new Set(validServerMsgs.map(m => m.id));
-      const localOnly = messagesCache.filter(m => !serverIds.has(m.id) && !deletedMsgIds.has(m.id) && (Date.now() - parseInt(m.timestamp) < 15000));
+      const localOnly = messagesCache.filter(m => !serverIds.has(m.id) && !deletedMsgIds.has(m.id) && m.name !== 'System' && m.type !== 'delete' && (Date.now() - parseInt(m.timestamp) < 15000));
       const newCache = [...validServerMsgs, ...localOnly];
       
       if (newCache.length !== messagesCache.length || JSON.stringify(newCache) !== JSON.stringify(messagesCache) || changed) {
@@ -854,8 +869,8 @@ async function fetchMessages() {
   } catch(e) {
     let mArr = safeParse(localStorage.getItem('nc_messages'), []);
     if (!Array.isArray(mArr)) mArr = [];
-    const localOnly = mArr.filter(m => !deletedMsgIds.has(m.id));
-    if (localOnly.length !== messagesCache.length) {
+    const localOnly = mArr.filter(m => !deletedMsgIds.has(m.id) && m.name !== 'System' && m.type !== 'delete');
+    if (localOnly.length !== messagesCache.length || JSON.stringify(localOnly) !== JSON.stringify(messagesCache)) {
       messagesCache = localOnly;
       changed = true;
     }
@@ -898,9 +913,11 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
       const avatar = msg.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${msg.name}`;
       
       let reactionsHtml = '<div class="flex gap-1 items-center flex-wrap mt-1">';
-      if (msg.reactions && Object.keys(msg.reactions).length > 0) {
+      if (msg.reactions && typeof msg.reactions === 'object' && Object.keys(msg.reactions).length > 0) {
         for (const [emoji, uids] of Object.entries(msg.reactions)) {
           if (emoji === 'deleted') continue; // Skip instruksi hapus
+          if (!Array.isArray(uids)) continue; // Safety check
+          
           const isActive = uids.includes(parseInt(user.id));
           const reactedNames = uids.map(uid => {
             const u = usersCache.find(x => String(x.id) === String(uid));
@@ -1100,16 +1117,18 @@ function toggleReactionPicker(btn) {
   if (isHidden) picker.classList.remove('hidden');
 }
 
-// PERBAIKAN UTAMA: Hapus pesan untuk semua user tanpa teks "System"
 async function deleteMessage(msgId) {
   if (!confirm('Hapus pesan ini?')) return;
+  
+  // 1. Hapus lokal
   deletedMsgIds.add(msgId);
   localStorage.setItem('nc_deleted_msgs', JSON.stringify([...deletedMsgIds]));
   messagesCache = messagesCache.filter(m => m.id !== msgId);
   lastMessagesHtml = '';
   renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : '');
   
-  // Kirim instruksi hapus ke server lewat field reactions
+  // 2. Kirim instruksi hapus ke server lewat field reactions
+  // Ini memastikan semua user akan menghapus pesan ini saat mereka polling
   apiPost({ action: 'updateReactions', id: msgId, reactions: { deleted: true } });
   
   showToast('Pesan dihapus permanen', 'success');
@@ -1117,17 +1136,26 @@ async function deleteMessage(msgId) {
 
 async function toggleReaction(msgId, emoji, pickerEl) {
   if (pickerEl) pickerEl.classList.add('hidden');
+  
   const msg = messagesCache.find(m => m.id == msgId);
   if (!msg) return;
-  if (!msg.reactions) msg.reactions = {};
-  if (msg.reactions.deleted) delete msg.reactions.deleted; // Jangan sampai tertimpa
+  
+  // Pastikan reactions adalah object
+  if (!msg.reactions || typeof msg.reactions !== 'object') {
+    msg.reactions = {};
+  }
+  if (msg.reactions.deleted) delete msg.reactions.deleted; // Jangan timpa flag deleted
   
   if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
   
   const uid = parseInt(localStorage.getItem('nc_session'));
   const idx = msg.reactions[emoji].indexOf(uid);
-  if (idx > -1) { msg.reactions[emoji].splice(idx, 1); if (msg.reactions[emoji].length === 0) delete msg.reactions[emoji]; }
-  else { msg.reactions[emoji].push(uid); }
+  if (idx > -1) {
+    msg.reactions[emoji].splice(idx, 1);
+    if (msg.reactions[emoji].length === 0) delete msg.reactions[emoji];
+  } else {
+    msg.reactions[emoji].push(uid);
+  }
   
   lastMessagesHtml = '';
   renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : '');
@@ -1275,7 +1303,6 @@ function startNotifCheck() {
       const unread = getUnreadCount(g.id, user.id);
       totalUnread += unread;
       
-      // Jangan notif kalau dia lagi ada di group itu DAN tab sedang aktif dilihat
       if (!isTabHidden && g.id === activeGroupId) return; 
       
       const msgs = messagesCache.filter(m => m.groupId === g.id && !deletedMsgIds.has(m.id));
@@ -1291,7 +1318,6 @@ function startNotifCheck() {
       }
     });
     
-    // PERBAIKAN NOTIFIKASI: Update title tab browser
     document.title = totalUnread > 0 ? `(${totalUnread}) Danatoto Chat` : 'Danatoto Chat';
     
     const notifBar = document.getElementById('notifBar');
@@ -1326,7 +1352,6 @@ function startNotifCheck() {
         notifBar.classList.remove('hidden');
         notifBar.dataset.targetGroup = latestGroupId;
 
-        // PERBAIKAN NOTIFIKASI: Selalu kirim notif browser kalau ada pesan baru, walau di tab lain
         if (isNewMsg) {
           playBeep();
           if ('Notification' in window && Notification.permission === 'granted') {
@@ -1347,7 +1372,7 @@ function startNotifCheck() {
       prevMsgCount = messagesCache.length;
       renderGroups(true);
     }
-  }, 3000);
+  }, 1500); // Dipercepat menjadi 1.5 detik agar pesan masuk lebih instan
 }
 
 function handleNotifClick() {
@@ -1619,7 +1644,8 @@ async function initializeApp() {
 
   let mArr = safeParse(localStorage.getItem('nc_messages'), []);
   if (!Array.isArray(mArr)) mArr = [];
-  messagesCache = mArr;
+  // Bersihkan cache lokal dari pesan sistem sampah
+  messagesCache = mArr.filter(m => m.name !== 'System' && m.type !== 'delete');
 
   ensureAdminExists();
 
