@@ -103,6 +103,14 @@
   }
   .notif-card:hover { transform: scale(1.02); border-color: #4ade80; }
   .notif-card.hidden { display: none; }
+
+  /* CSS untuk Dropdown Mention */
+  .mention-dropdown {
+    position: absolute; bottom: 70px; left: 10px; width: 260px; max-height: 220px; overflow-y: auto;
+    background: #18181b; border: 1px solid #3f3f46; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 50; padding: 6px;
+  }
+  .mention-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+  .mention-item:hover { background: #27272a; }
 </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -206,10 +214,11 @@
              <div id="gifGrid" class="hidden grid grid-cols-2 gap-1 overflow-y-auto"></div>
            </div>
 
-          <form id="messageForm" class="flex items-center gap-3">
+          <form id="messageForm" class="flex items-center gap-3 relative">
+            <div id="mentionDropdown" class="hidden mention-dropdown"></div>
             <button type="button" id="pickerBtn" class="w-11 h-11 rounded-xl bg-[#18181b] hover:bg-[#27272a] text-gray-500 hover:text-green-400 flex items-center justify-center flex-shrink-0 transition-all" disabled><i class="fas fa-smile"></i></button>
             <button type="button" id="uploadImgBtn" class="w-11 h-11 rounded-xl bg-[#18181b] hover:bg-[#27272a] text-gray-500 hover:text-green-400 flex items-center justify-center flex-shrink-0 transition-all" disabled><i class="fas fa-image"></i></button>
-            <input type="text" id="messageInput" class="input-style flex-1 px-4 py-3 rounded-xl text-sm" placeholder="Ketik pesan..." disabled>
+            <input type="text" id="messageInput" class="input-style flex-1 px-4 py-3 rounded-xl text-sm" placeholder="Ketik pesan... (Gunakan @ untuk mention)" disabled>
             <button type="submit" id="sendBtn" class="btn-primary w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" disabled><i class="fas fa-paper-plane"></i></button>
           </form>
         </div>
@@ -312,7 +321,7 @@
         </div>
         
         <div class="flex items-center justify-between mb-2 mt-6">
-          <h4 class="text-xs font-bold uppercase text-gray-500">Centang User untuk Masuk/Keluar Group</h4>
+          <h4 class="text-xs font-bold uppercase text-gray-500">Pilih Anggota Group</h4>
           <span id="memberCountDisplay" class="text-xs text-green-400 font-bold">0 Anggota</span>
         </div>
         
@@ -921,6 +930,100 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
   }
 }
 
+// [FITUR MENTION @] ------------------------------------------------
+const messageInput = document.getElementById('messageInput');
+const mentionDropdown = document.getElementById('mentionDropdown');
+
+messageInput.addEventListener('input', () => {
+  const val = messageInput.value;
+  const caretPos = messageInput.selectionStart;
+  const textBeforeCaret = val.substring(0, caretPos);
+  const match = textBeforeCaret.match(/@(\w*)$/);
+
+  if (match && activeGroupId) {
+    const query = match[1].toLowerCase();
+    const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
+    if (!user) return;
+
+    // Cari anggota yang ada di group ini
+    const groupMembers = usersCache.filter(u => 
+      u.role === 'admin' || (u.groupAccess && u.groupAccess.includes(activeGroupId))
+    );
+
+    const filteredMembers = groupMembers.filter(u => 
+      u.name.toLowerCase().includes(query) || u.username.toLowerCase().includes(query)
+    );
+
+    let html = '';
+    
+    // Opsi All
+    if ('all'.includes(query) || query === '') {
+      html += `
+        <div class="mention-item" onclick="insertMention('all')">
+          <div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-black font-bold text-sm">
+            <i class="fas fa-bullhorn"></i>
+          </div>
+          <div>
+            <div class="text-sm text-white font-bold">all</div>
+            <div class="text-[10px] text-gray-400">Tag semua anggota</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Daftar Anggota
+    filteredMembers.forEach(m => {
+      if (m.id === user.id) return; // Skip diri sendiri
+      const mAvatar = m.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${m.name}`;
+      html += `
+        <div class="mention-item" onclick="insertMention('${m.username.replace(/'/g, "\\'")}')">
+          <img src="${mAvatar}" class="w-9 h-9 rounded-full object-cover">
+          <div>
+            <div class="text-sm text-white font-bold">${m.name}</div>
+            <div class="text-[10px] text-gray-400">@${m.username}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    if (html !== '') {
+      mentionDropdown.innerHTML = html;
+      mentionDropdown.classList.remove('hidden');
+    } else {
+      mentionDropdown.classList.add('hidden');
+    }
+  } else {
+    mentionDropdown.classList.add('hidden');
+  }
+});
+
+function insertMention(name) {
+  const val = messageInput.value;
+  const caretPos = messageInput.selectionStart;
+  const textBeforeCaret = val.substring(0, caretPos);
+  const textAfterCaret = val.substring(caretPos);
+  
+  const match = textBeforeCaret.match(/@(\w*)$/);
+  if (match) {
+    const newText = textBeforeCaret.substring(0, match.index) + `@${name} ` + textAfterCaret;
+    messageInput.value = newText;
+    mentionDropdown.classList.add('hidden');
+    
+    // Set caret ke akhir mention
+    const newCaretPos = match.index + name.length + 2; // +2 untuk @ dan spasi
+    messageInput.focus();
+    messageInput.setSelectionRange(newCaretPos, newCaretPos);
+  }
+}
+
+// Tutup dropdown jika klik di luar
+document.addEventListener('click', (e) => {
+  if (!mentionDropdown.contains(e.target) && e.target !== messageInput) {
+    mentionDropdown.classList.add('hidden');
+  }
+});
+// ----------------------------------------------------------------
+
 function replyMessage(msgId) {
   const msg = messagesCache.find(m => m.id === msgId);
   if (!msg) return;
@@ -987,6 +1090,7 @@ document.getElementById('messageForm').addEventListener('submit', async (e) => {
   
   messagesCache.push(msg);
   input.value = '';
+  mentionDropdown.classList.add('hidden'); // sembunyikan mention saat kirim
   renderMessages();
   renderGroups();
   apiPost({ action: 'saveMessage', ...msg });
@@ -1296,6 +1400,7 @@ document.getElementById('editGroupLogoInput').addEventListener('change', (e) => 
   });
 });
 
+// [FIX DAFTAR ANGGOTA RAPI] Tampilan list anggota di gerigi
 function renderGroupMembersChecklist(groupId) {
   const g = groupsCache.find(x => x.id === groupId);
   if (!g) return;
@@ -1306,11 +1411,21 @@ function renderGroupMembersChecklist(groupId) {
     const hasAccess = u.groupAccess.includes(groupId);
     const isLeader = u.id == g.leaderId;
     if (hasAccess || isLeader) activeCount++;
+    
+    const uAvatar = u.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${u.name}`;
     return `
-      <label class="flex items-center gap-2 p-2 hover:bg-[#18181b] rounded-lg cursor-pointer">
-        <input type="checkbox" class="member-cb accent-green-500 w-4 h-4" data-uid="${u.id}" ${hasAccess ? 'checked' : ''} ${isLeader ? 'disabled' : ''} onchange="toggleMemberAccess('${u.id}', '${groupId}')">
-        <span class="text-sm flex-1">${u.name}</span>
-        ${isLeader ? '<span class="text-[10px] text-green-400 bg-green-500/10 px-2 py-1 rounded">Leader</span>' : ''}
+      <label class="flex items-center justify-between p-2 hover:bg-[#18181b] rounded-lg cursor-pointer">
+        <div class="flex items-center gap-3">
+          <input type="checkbox" class="member-cb accent-green-500 w-4 h-4" data-uid="${u.id}" ${hasAccess ? 'checked' : ''} ${isLeader ? 'disabled' : ''} onchange="toggleMemberAccess('${u.id}', '${groupId}')">
+          <img src="${uAvatar}" class="w-9 h-9 rounded-full object-cover">
+          <div>
+            <div class="text-sm font-semibold text-white flex items-center gap-2">
+              ${u.name}
+              ${isLeader ? '<span class="text-[10px] text-green-400 bg-green-500/10 px-2 py-1 rounded">Leader</span>' : ''}
+            </div>
+            <div class="text-[10px] text-gray-500">@${u.username}</div>
+          </div>
+        </div>
       </label>`;
   }).join('');
   
