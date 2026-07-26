@@ -811,6 +811,7 @@ function updateChatHeader() {
   `;
 }
 
+// PERBAIKAN UTAMA: Hapus pesan akan ter-broadcast ke semua user
 async function fetchMessages() {
   let changed = false;
   try {
@@ -818,12 +819,24 @@ async function fetchMessages() {
     const data = await res.json();
     const actualData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
     if (actualData.length > 0) {
-      const validServerMsgs = actualData.filter(m => !deletedMsgIds.has(m.id));
+      // Cek apakah ada instruksi hapus dari server
+      let newDeletes = false;
+      actualData.forEach(m => {
+        if (m.type === 'delete' && !deletedMsgIds.has(m.content)) {
+          deletedMsgIds.add(m.content);
+          newDeletes = true;
+        }
+      });
+      if (newDeletes) {
+        localStorage.setItem('nc_deleted_msgs', JSON.stringify([...deletedMsgIds]));
+      }
+      
+      const validServerMsgs = actualData.filter(m => !deletedMsgIds.has(m.id) && m.type !== 'delete');
       const serverIds = new Set(validServerMsgs.map(m => m.id));
       const localOnly = messagesCache.filter(m => !serverIds.has(m.id) && !deletedMsgIds.has(m.id) && (Date.now() - parseInt(m.timestamp) < 15000));
       const newCache = [...validServerMsgs, ...localOnly];
       
-      if (newCache.length !== messagesCache.length || JSON.stringify(newCache) !== JSON.stringify(messagesCache)) {
+      if (newCache.length !== messagesCache.length || JSON.stringify(newCache) !== JSON.stringify(messagesCache) || newDeletes) {
         messagesCache = newCache;
         localStorage.setItem('nc_messages', JSON.stringify(messagesCache));
         changed = true;
@@ -832,7 +845,7 @@ async function fetchMessages() {
   } catch(e) {
     let mArr = safeParse(localStorage.getItem('nc_messages'), []);
     if (!Array.isArray(mArr)) mArr = [];
-    const localOnly = mArr.filter(m => !deletedMsgIds.has(m.id));
+    const localOnly = mArr.filter(m => !deletedMsgIds.has(m.id) && m.type !== 'delete');
     if (localOnly.length !== messagesCache.length) {
       messagesCache = localOnly;
       changed = true;
@@ -875,7 +888,7 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
       const isSelf = msg.userId == user.id;
       const avatar = msg.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${msg.name}`;
       
-      let reactionsHtml = '<div class="flex gap-1 items-center flex-wrap">';
+      let reactionsHtml = '<div class="flex gap-1 items-center flex-wrap mt-1">';
       if (msg.reactions && Object.keys(msg.reactions).length > 0) {
         for (const [emoji, uids] of Object.entries(msg.reactions)) {
           const isActive = uids.includes(parseInt(user.id));
@@ -904,32 +917,35 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
       const msgAnimClass = isFreshMsg ? 'msg-in' : '';
       
       let actionsHtml = `<div class="msg-actions ${isSelf ? 'flex-row-reverse' : ''}">`;
-      actionsHtml += `<button class="msg-action-btn" onclick="replyMessage('${msg.id}')" title="Balas"><i class="fas fa-reply"></i></button>`;
+      actionsHtml += `<button class="msg-action-btn" onclick="event.stopPropagation(); replyMessage('${msg.id}')" title="Balas"><i class="fas fa-reply"></i></button>`;
       actionsHtml += `<div class="relative">
-        <button class="msg-action-btn" onclick="toggleReactionPicker(this)" title="Kasih Emot"><i class="fas fa-smile"></i></button>
-        <div class="reaction-picker hidden ${isSelf ? 'right-align' : 'left-align'}">
+        <button class="msg-action-btn" onclick="event.stopPropagation(); toggleReactionPicker(this)" title="Kasih Emot"><i class="fas fa-smile"></i></button>
+        <div class="reaction-picker hidden ${isSelf ? 'right-align' : 'left-align'}" onmouseleave="this.classList.add('hidden')">
           ${emojis.map(e => `<button onclick="toggleReaction('${msg.id}', '${e}', this.parentElement)">${e}</button>`).join('')}
         </div>
       </div>`;
       if (isSelf) {
-        actionsHtml += `<button class="msg-action-btn danger" onclick="deleteMessage('${msg.id}')" title="Hapus"><i class="fas fa-trash"></i></button>`;
+        actionsHtml += `<button class="msg-action-btn danger" onclick="event.stopPropagation(); deleteMessage('${msg.id}')" title="Hapus"><i class="fas fa-trash"></i></button>`;
       }
       actionsHtml += `</div>`;
+      
+      const radiusStyle = isSelf ? 'border-top-right-radius: 2px;' : 'border-top-left-radius: 2px;';
+      const bubbleClass = isSelf ? 'bg-green-500/10 border border-green-500/20 text-white' : 'bg-[#18181b] border border-[#27272a] text-white';
       
       html += `
         <div id="msg-${msg.id}" class="msg-group ${msgAnimClass} flex gap-3 mb-6 ${isSelf ? 'flex-row-reverse' : ''}">
           <img src="${avatar}" class="w-9 h-9 rounded-full flex-shrink-0 object-cover mt-1">
-          <div class="max-w-[70%] flex flex-col ${isSelf ? 'items-end' : 'items-start'}">
+          <div class="max-w-[75%] flex flex-col ${isSelf ? 'items-end' : 'items-start'}">
             <div class="flex items-center gap-2 ${isSelf ? 'justify-end' : ''} mb-1">
               <span class="text-xs font-bold ${isSelf ? 'text-green-400' : 'text-white'}">${msg.name}</span>
               <span class="text-[10px] text-gray-600">${formatTime(msg.timestamp)}</span>
             </div>
             
-            <div class="flex items-end gap-2 ${isSelf ? 'flex-row-reverse' : ''}">
-              <div class="relative">
+            <div class="flex items-end gap-1.5 ${isSelf ? 'flex-row-reverse' : ''}">
+              <div class="relative max-w-full">
                 ${msg.type === 'image' || msg.type === 'gif' ? 
                   `<img src="${msg.content}" class="chat-img" loading="lazy" onclick="viewImage('${msg.content}')">` :
-                  `<div class="bg-[#18181b] px-4 py-2.5 rounded-2xl text-sm inline-block break-words border border-[#27272a]" style="border-top-left-radius: 2px;">${replyHtml}${formatContent(actualContent)}</div>`
+                  `<div class="${bubbleClass} px-4 py-2.5 rounded-2xl text-sm w-fit max-w-full" style="${radiusStyle} overflow-wrap: anywhere;">${replyHtml}${formatContent(actualContent)}</div>`
                 }
               </div>
               ${actionsHtml}
@@ -1039,7 +1055,7 @@ function insertMention(name) {
   }
 }
 
-// PERBAIKAN: Jika mouse digeser / klik di luar tombol emot, pop-up emot otomatis hilang
+// PERBAIKAN EMOT: Jika klik luar / mouse geser, auto hide
 document.addEventListener('click', (e) => {
   if (!mentionDropdown.contains(e.target) && e.target !== messageInput) {
     mentionDropdown.classList.add('hidden');
@@ -1075,14 +1091,34 @@ function toggleReactionPicker(btn) {
   if (isHidden) picker.classList.remove('hidden');
 }
 
+// PERBAIKAN UTAMA: Kirim instruksi hapus ke server agar semua user terupdate
 async function deleteMessage(msgId) {
   if (!confirm('Hapus pesan ini?')) return;
   deletedMsgIds.add(msgId);
   localStorage.setItem('nc_deleted_msgs', JSON.stringify([...deletedMsgIds]));
+  
+  // Hapus dari layar lokal
   messagesCache = messagesCache.filter(m => m.id !== msgId);
   lastMessagesHtml = '';
   renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : '');
-  apiPost({ action: 'deleteMessage', id: msgId });
+  
+  // Broadcast penghapusan ke server dengan tipe 'delete' agar semua user tau
+  const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
+  if (user && activeGroupId) {
+    const delMsg = { 
+      id: 'm_del_' + Date.now() + Math.random().toString(36).substr(2, 5), 
+      groupId: activeGroupId, 
+      userId: user.id, 
+      name: 'System', 
+      avatar: '', 
+      content: msgId, // ID pesan yang mau dihapus
+      timestamp: Date.now(), 
+      type: 'delete', 
+      reactions: {} 
+    };
+    apiPost({ action: 'saveMessage', ...delMsg });
+  }
+  
   showToast('Pesan dihapus permanen', 'success');
 }
 
