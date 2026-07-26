@@ -25,6 +25,7 @@
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #52525b; }
   
   .glass { background: rgba(20, 20, 25, 0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
   .neon-border { box-shadow: 0 0 15px rgba(34, 197, 94, 0.3), 0 0 30px rgba(34, 197, 94, 0.1); }
@@ -53,22 +54,26 @@
 
   .msg-group { position: relative; }
   
-  .msg-actions-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
-  .action-icon-btn { 
-    color: #d1d5db; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); 
-    padding: 4px 10px; border-radius: 8px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; 
-    cursor: pointer; transition: all 0.2s; 
+  /* PERAPIAN TOMBOL ACTION (HAPUS, BALAS, EMOT) */
+  .msg-actions { display: flex; flex-direction: column; gap: 4px; opacity: 0.3; transition: opacity 0.2s; align-self: center; }
+  .msg-group:hover .msg-actions { opacity: 1; }
+  
+  .msg-action-btn { 
+    background: rgba(24,24,27,0.8); border: 1px solid #27272a; color: #a1a1aa; 
+    width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; 
+    font-size: 13px; cursor: pointer; transition: all 0.2s; 
   }
-  .action-icon-btn:hover { color: #fff; background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); }
-  .action-icon-btn.danger:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); border-color: #ef4444; }
+  .msg-action-btn:hover { color: #fff; border-color: #22c55e; background: #27272a; box-shadow: 0 0 8px rgba(34,197,94,0.3); }
+  .msg-action-btn.danger { color: #ef4444; border-color: rgba(239,68,68,0.3); opacity: 1 !important; } /* Tombol hapus selalu terang */
+  .msg-action-btn.danger:hover { background: #ef4444; color: #fff; border-color: #ef4444; box-shadow: 0 0 12px rgba(239,68,68,0.5); }
   
   .reaction-picker { 
-    position: absolute; bottom: 100%; right: 0; margin-bottom: 8px;
-    background: #18181b; border: 1px solid #52525b; 
+    position: absolute; top: 50%; transform: translateY(-50%);
+    right: 120%; margin-right: 8px; background: #18181b; border: 1px solid #52525b; 
     border-radius: 20px; padding: 4px 6px; display: flex; gap: 4px; z-index: 20; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
   }
-  .reaction-picker.left-align { right: auto; left: 0; }
+  .reaction-picker.right-align { right: auto; left: 120%; margin-right: 0; margin-left: 8px; }
   .reaction-picker.hidden { display: none; }
   .reaction-picker button { font-size: 18px; padding: 2px 4px; border-radius: 50%; transition: transform 0.1s; background: transparent; border: none; cursor: pointer; }
   .reaction-picker button:hover { transform: scale(1.3); background: #3f3f46; }
@@ -83,8 +88,6 @@
   
   .gif-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 4px; cursor: pointer; transition: transform 0.1s; }
   .gif-item img:hover { transform: scale(1.05); }
-  
-  .action-btn { z-index: 5; position: relative; pointer-events: auto; }
   
   .online-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; border: 2px solid #0d0d12; position: absolute; bottom: 0; right: 0; animation: pulse 2s infinite; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
@@ -110,6 +113,12 @@
   }
   .mention-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
   .mention-item:hover { background: #27272a; }
+
+  /* Avatar Stack di Sidebar Group */
+  .avatar-stack { display: flex; align-items: center; }
+  .avatar-stack img { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #141417; object-fit: cover; margin-left: -6px; }
+  .avatar-stack img:first-child { margin-left: 0; }
+  .avatar-stack .more-count { font-size: 9px; background: #27272a; color: #fff; padding: 2px 4px; border-radius: 10px; margin-left: -6px; border: 1px solid #141417; }
 </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -301,6 +310,7 @@
     </div>
   </div>
 
+  <!-- MODAL KATEGORI ANGGOTA YANG CANTIK -->
   <div id="manageGroupModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
     <div class="glass rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col neon-border">
       <div class="p-5 border-b border-[#27272a] flex items-center justify-between">
@@ -316,15 +326,17 @@
             <textarea id="editGroupDesc" class="input-style w-full px-4 py-2.5 rounded-lg text-sm" rows="2" placeholder="Deskripsi"></textarea>
           </div>
         </div>
-        <div class="flex items-center justify-between mb-2 mt-6">
-          <h4 class="text-xs font-bold uppercase text-gray-500">Pilih Anggota Group</h4>
-          <span id="memberCountDisplay" class="text-xs text-green-400 font-bold">0 Anggota</span>
+        
+        <div class="flex items-center justify-between mb-3 mt-6">
+          <h4 class="text-xs font-bold uppercase text-gray-500">Anggota Group <span id="memberCountDisplay" class="text-green-400 font-bold ml-1">(0)</span></h4>
+          <button onclick="toggleAddMemberList()" class="btn-primary px-3 py-1.5 rounded-lg text-xs flex items-center gap-1"><i class="fas fa-plus"></i> Tambah Anggota</button>
         </div>
-        <div class="flex items-center gap-2 mb-2 p-2 bg-[#18181b] rounded-lg border border-[#27272a]">
-          <input type="checkbox" id="selectAllMembers" class="accent-green-500 w-4 h-4" onchange="toggleAllMembers(this)">
-          <label for="selectAllMembers" class="text-xs text-gray-300 cursor-pointer flex-1">Pilih Semua User</label>
-        </div>
-        <div id="groupMembersList" class="space-y-1 max-h-64 overflow-y-auto bg-[#0a0a0c] p-3 rounded-xl border border-[#27272a]"></div>
+        
+        <!-- Toggle untuk cari user yang belum masuk -->
+        <div id="addMemberListContainer" class="hidden mb-3 p-2 bg-[#18181b] rounded-lg border border-[#27272a] max-h-40 overflow-y-auto space-y-1"></div>
+        
+        <div id="groupMembersList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+        
         <div class="flex gap-2 mt-6">
           <button onclick="adminDeleteGroup()" class="btn-danger w-full py-2.5 rounded-lg text-sm"><i class="fas fa-trash mr-2"></i> Hapus Group</button>
           <button onclick="saveGroupChanges()" class="btn-primary w-full py-2.5 rounded-lg text-sm">Simpan Perubahan</button>
@@ -509,7 +521,6 @@ function openModal(id) { document.getElementById(id).classList.remove('hidden');
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function viewImage(src) { document.getElementById('imageViewerSrc').src = src; openModal('imageViewerModal'); }
 
-// [FIX NOTIF BEEP] Sistem suara notifikasi
 function playBeep() {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -728,6 +739,21 @@ function renderGroups(forceRender = false) {
       lastMsgHtml = `<span class="text-green-400 font-medium">${lastMsg.name.split(' ')[0]}:</span> ${escapeHtml(msgText.substring(0, 20))}${msgText.length > 20 ? '...' : ''}`;
     }
 
+    // Render Avatar Anggota bertumpuk
+    const membersInGroup = usersCache.filter(u => u.role === 'admin' || (u.groupAccess && u.groupAccess.includes(g.id)));
+    let membersHtml = '';
+    if (membersInGroup.length > 0) {
+      membersHtml = '<div class="avatar-stack mt-1.5">';
+      membersInGroup.slice(0, 3).forEach(m => {
+        const mAvatar = m.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${m.name.substring(0,1)}`;
+        membersHtml += `<img src="${mAvatar}" title="${m.name}">`;
+      });
+      if (membersInGroup.length > 3) {
+        membersHtml += `<div class="more-count">+${membersInGroup.length - 3}</div>`;
+      }
+      membersHtml += '</div>';
+    }
+
     return `
       <div class="group-item ${activeGroupId === g.id ? 'active' : ''} px-3 py-3 cursor-pointer flex items-center gap-3" onclick="selectGroup('${g.id}')">
         <img src="${logo}" class="w-12 h-12 rounded-xl object-cover flex-shrink-0">
@@ -740,8 +766,9 @@ function renderGroups(forceRender = false) {
             <span class="text-[11px] text-gray-500 truncate">${lastMsgHtml}</span>
             ${unread > 0 ? `<span class="bg-green-500 text-black font-bold text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 ml-2 flex-shrink-0">${unread}</span>` : ''}
           </div>
+          ${membersHtml}
         </div>
-        <div class="flex flex-col gap-1 flex-shrink-0 z-10 relative">
+        <div class="flex flex-col gap-2 flex-shrink-0 z-10 relative">
           <button class="action-btn w-7 h-7 flex items-center justify-center text-gray-700 hover:text-white" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan">
             <i class="fas fa-thumbtack text-xs ${isPinned ? 'text-green-400' : ''}"></i>
           </button>
@@ -901,37 +928,39 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
       const isFreshMsg = !isInitialLoad && !searchTerm && (Date.now() - parseInt(msg.timestamp) < 5000);
       const msgAnimClass = isFreshMsg ? 'msg-in' : '';
       
-      let actionsHtml = `<div class="msg-actions-row ${isSelf ? 'justify-end' : ''}">`;
-      if (!isSelf) {
-        actionsHtml += `<button class="action-icon-btn" onclick="replyMessage('${msg.id}')" title="Balas"><i class="fas fa-reply"></i> Balas</button>`;
-        actionsHtml += `<div class="relative">
-          <button class="action-icon-btn" onclick="toggleReactionPicker(this)" title="Kasih Emot"><i class="fas fa-smile"></i> Emot</button>
-          <div class="reaction-picker hidden left-align">
-            ${emojis.map(e => `<button onclick="toggleReaction('${msg.id}', '${e}', this.parentElement)">${e}</button>`).join('')}
-          </div>
-        </div>`;
-      }
+      // Aksi Tombol Hapus (Cuma Simbol Terang)
+      let actionsHtml = `<div class="msg-actions ${isSelf ? 'flex-row-reverse' : ''}">`;
+      actionsHtml += `<button class="msg-action-btn" onclick="replyMessage('${msg.id}')" title="Balas"><i class="fas fa-reply"></i></button>`;
+      actionsHtml += `<div class="relative">
+        <button class="msg-action-btn" onclick="toggleReactionPicker(this)" title="Kasih Emot"><i class="fas fa-smile"></i></button>
+        <div class="reaction-picker hidden ${isSelf ? 'right-align' : 'left-align'}">
+          ${emojis.map(e => `<button onclick="toggleReaction('${msg.id}', '${e}', this.parentElement)">${e}</button>`).join('')}
+        </div>
+      </div>`;
       if (isSelf) {
-        actionsHtml += `<button class="action-icon-btn danger" onclick="deleteMessage('${msg.id}')" title="Hapus"><i class="fas fa-trash"></i> Hapus</button>`;
+        actionsHtml += `<button class="msg-action-btn danger" onclick="deleteMessage('${msg.id}')" title="Hapus"><i class="fas fa-trash"></i></button>`;
       }
       actionsHtml += `</div>`;
       
       html += `
         <div id="msg-${msg.id}" class="msg-group ${msgAnimClass} flex gap-3 mb-6 ${isSelf ? 'flex-row-reverse' : ''}">
           <img src="${avatar}" class="w-9 h-9 rounded-full flex-shrink-0 object-cover mt-1">
-          <div class="max-w-[70%]">
+          <div class="max-w-[70%] flex flex-col ${isSelf ? 'items-end' : 'items-start'}">
             <div class="flex items-center gap-2 ${isSelf ? 'justify-end' : ''} mb-1">
               <span class="text-xs font-bold ${isSelf ? 'text-green-400' : 'text-white'}">${msg.name}</span>
               <span class="text-[10px] text-gray-600">${formatTime(msg.timestamp)}</span>
             </div>
-            <div class="relative">
-              ${msg.type === 'image' || msg.type === 'gif' ? 
-                `<img src="${msg.content}" class="chat-img" loading="lazy" onclick="viewImage('${msg.content}')">` :
-                `<div class="bg-[#18181b] px-4 py-2.5 rounded-2xl text-sm inline-block break-words border border-[#27272a]" style="border-top-left-radius: 2px;">${replyHtml}${formatContent(actualContent)}</div>`
-              }
+            
+            <div class="flex items-end gap-2 ${isSelf ? 'flex-row-reverse' : ''}">
+              <div class="relative">
+                ${msg.type === 'image' || msg.type === 'gif' ? 
+                  `<img src="${msg.content}" class="chat-img" loading="lazy" onclick="viewImage('${msg.content}')">` :
+                  `<div class="bg-[#18181b] px-4 py-2.5 rounded-2xl text-sm inline-block break-words border border-[#27272a]" style="border-top-left-radius: 2px;">${replyHtml}${formatContent(actualContent)}</div>`
+                }
+              </div>
+              ${actionsHtml}
             </div>
             
-            ${actionsHtml}
             ${reactionsHtml}
           </div>
         </div>`;
@@ -1241,7 +1270,6 @@ function startNotifCheck() {
     
     const notifBar = document.getElementById('notifBar');
     if (latestMsg) {
-      // [FIX UTAMA] Notif akan terus muncul selama belum dibaca, tidak hilang dalam 5 detik
       if (latestMsg.id !== lastNotifiedMsgId || notifBar.classList.contains('hidden')) {
         const isNewMsg = latestMsg.id !== lastNotifiedMsgId;
         lastNotifiedMsgId = latestMsg.id;
@@ -1417,6 +1445,7 @@ function openManageGroupModal(id) {
   document.getElementById('editGroupDesc').value = g.desc;
   document.getElementById('editGroupLogoPreview').src = g.logo || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${g.name.substring(0,2)}`;
   currentGroupLogo = g.logo || '';
+  document.getElementById('addMemberListContainer').classList.add('hidden');
   renderGroupMembersChecklist(id);
   openModal('manageGroupModal');
 }
@@ -1430,69 +1459,65 @@ document.getElementById('editGroupLogoInput').addEventListener('change', (e) => 
   });
 });
 
+function toggleAddMemberList() {
+  const c = document.getElementById('addMemberListContainer');
+  c.classList.toggle('hidden');
+  if(!c.classList.contains('hidden')) {
+    renderNonMembers(currentEditGroupId);
+  }
+}
+
 function renderGroupMembersChecklist(groupId) {
   const g = groupsCache.find(x => x.id === groupId);
   if (!g) return;
-  const targetUsers = usersCache.filter(u => u.role !== 'admin');
-  
-  let activeCount = 0;
-  const html = targetUsers.map(u => {
-    const hasAccess = u.groupAccess.includes(groupId);
+  const members = usersCache.filter(u => u.role === 'admin' || u.groupAccess.includes(groupId) || u.id == g.leaderId);
+  let activeCount = members.length;
+
+  const html = members.map(u => {
     const isLeader = u.id == g.leaderId;
-    if (hasAccess || isLeader) activeCount++;
-    
     const uAvatar = u.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${u.name}`;
     return `
-      <label class="flex items-center justify-between p-2 hover:bg-[#18181b] rounded-lg cursor-pointer border-b border-[#27272a]/50">
+      <div class="flex items-center justify-between p-2.5 bg-[#0a0a0c] rounded-lg border border-[#27272a]">
         <div class="flex items-center gap-3">
-          <input type="checkbox" class="member-cb accent-green-500 w-4 h-4" data-uid="${u.id}" ${hasAccess ? 'checked' : ''} ${isLeader ? 'disabled' : ''} onchange="toggleMemberAccess('${u.id}', '${groupId}')">
-          <img src="${uAvatar}" class="w-10 h-10 rounded-full object-cover">
-          <div class="flex-1">
+          <img src="${uAvatar}" class="w-9 h-9 rounded-full object-cover">
+          <div>
             <div class="text-sm font-semibold text-white flex items-center gap-2">
               ${u.name}
-              ${isLeader ? '<span class="text-[10px] text-green-400 bg-green-500/10 px-2 py-0.5 rounded">Leader</span>' : ''}
+              ${u.role === 'admin' ? '<span class="text-[9px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded uppercase font-bold">Admin</span>' : ''}
+              ${isLeader ? '<span class="text-[9px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded uppercase font-bold">Leader</span>' : ''}
             </div>
             <div class="text-[10px] text-gray-500">@${u.username}</div>
           </div>
         </div>
-        <div class="text-[10px] font-bold ${hasAccess || isLeader ? 'text-green-400' : 'text-gray-600'}">
-          ${hasAccess || isLeader ? 'Anggota' : 'Undang'}
-        </div>
-      </label>`;
+        ${!isLeader && u.role !== 'admin' ? `<button onclick="toggleMemberAccess('${u.id}', '${groupId}')" class="text-[11px] text-red-400 hover:bg-red-500/10 px-3 py-1.5 rounded-md font-medium border border-red-500/20 transition-colors"><i class="fas fa-user-minus mr-1"></i> Keluarkan</button>` : '<span class="text-[10px] text-gray-600">Owner</span>'}
+      </div>`;
   }).join('');
-  
-  document.getElementById('groupMembersList').innerHTML = html || '<p class="text-xs text-gray-600 text-center py-4">Belum ada user</p>';
-  document.getElementById('memberCountDisplay').textContent = `${activeCount} Anggota`;
-  
-  const selectableUsers = targetUsers.filter(u => u.id != g.leaderId);
-  const checkedCount = selectableUsers.filter(u => u.groupAccess.includes(groupId)).length;
-  const selectAllCb = document.getElementById('selectAllMembers');
-  selectAllCb.checked = selectableUsers.length > 0 && checkedCount === selectableUsers.length;
+
+  document.getElementById('groupMembersList').innerHTML = html || '<p class="text-xs text-gray-600 text-center py-4">Belum ada anggota</p>';
+  document.getElementById('memberCountDisplay').textContent = `(${activeCount})`;
 }
 
-async function toggleAllMembers(masterCheckbox) {
-  const isChecked = masterCheckbox.checked;
-  const gid = currentEditGroupId;
-  const g = groupsCache.find(x => x.id === gid);
+function renderNonMembers(groupId) {
+  const g = groupsCache.find(x => x.id === groupId);
   if (!g) return;
+  const nonMembers = usersCache.filter(u => u.role !== 'admin' && u.id != g.leaderId && !u.groupAccess.includes(groupId));
   
-  const targetUsers = usersCache.filter(u => u.role !== 'admin' && u.id != g.leaderId);
+  const html = nonMembers.map(u => {
+    const uAvatar = u.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${u.name}`;
+    return `
+      <div class="flex items-center justify-between p-2 rounded-lg hover:bg-[#27272a] transition-colors">
+        <div class="flex items-center gap-3">
+          <img src="${uAvatar}" class="w-8 h-8 rounded-full object-cover">
+          <div>
+            <div class="text-sm font-semibold text-white">${u.name}</div>
+            <div class="text-[10px] text-gray-500">@${u.username}</div>
+          </div>
+        </div>
+        <button onclick="toggleMemberAccess('${u.id}', '${groupId}')" class="text-[11px] bg-green-500 text-black px-3 py-1.5 rounded-md font-bold hover:bg-green-400 transition-colors flex items-center gap-1"><i class="fas fa-user-plus"></i> Masukkan</button>
+      </div>`;
+  }).join('');
   
-  targetUsers.forEach(u => {
-    const hasAccess = u.groupAccess.includes(gid);
-    if (isChecked && !hasAccess) {
-      u.groupAccess.push(gid);
-      apiPost({ action: 'updateUserAccess', id: u.id, ip: u.ip, groupAccess: u.groupAccess, avatar: u.avatar, pinnedGroups: u.pinnedGroups || [] });
-    } else if (!isChecked && hasAccess) {
-      u.groupAccess = u.groupAccess.filter(id => id !== gid);
-      apiPost({ action: 'updateUserAccess', id: u.id, ip: u.ip, groupAccess: u.groupAccess, avatar: u.avatar, pinnedGroups: u.pinnedGroups || [] });
-    }
-  });
-  
-  localStorage.setItem('nc_users', JSON.stringify(usersCache));
-  renderGroupMembersChecklist(gid);
-  renderGroups(true);
-  showToast(isChecked ? 'Semua user ditambahkan' : 'Semua user dikeluarkan', 'success');
+  document.getElementById('addMemberListContainer').innerHTML = html || '<p class="text-xs text-gray-600 text-center py-2">Semua user sudah menjadi anggota</p>';
 }
 
 async function toggleMemberAccess(uid, gid) {
@@ -1503,6 +1528,7 @@ async function toggleMemberAccess(uid, gid) {
     localStorage.setItem('nc_users', JSON.stringify(usersCache));
     
     renderGroupMembersChecklist(gid);
+    renderNonMembers(gid);
     renderGroups(true);
     apiPost({ action: 'updateUserAccess', id: u.id, ip: u.ip, groupAccess: u.groupAccess, avatar: u.avatar, pinnedGroups: u.pinnedGroups || [] });
   }
