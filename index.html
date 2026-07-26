@@ -77,9 +77,10 @@
   .reaction-picker button { font-size: 18px; padding: 2px 4px; border-radius: 50%; transition: transform 0.1s; background: transparent; border: none; cursor: pointer; }
   .reaction-picker button:hover { transform: scale(1.3); background: #3f3f46; }
   
-  .reaction-pill { background: #18181b; border: 1px solid #3f3f46; font-size: 12px; padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: #a1a1aa; margin-top: 4px; }
+  .reaction-pill { background: #18181b; border: 1px solid #3f3f46; font-size: 12px; padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: #a1a1aa; margin-top: 4px; position: relative; }
   .reaction-pill:hover { border-color: #fff; }
   .reaction-pill.active { background: #22c55e; border-color: #22c55e; color: #000; font-weight: bold; }
+  .reaction-pill:hover::after { content: attr(data-tip); position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #000; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 10px; white-space: nowrap; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
 
   .chat-img { max-width: 220px; max-height: 220px; border-radius: 12px; cursor: pointer; transition: transform 0.2s; }
   .chat-img:hover { transform: scale(1.02); }
@@ -361,6 +362,7 @@ function safeParse(str, fallback) {
   } catch(e) { return fallback; }
 }
 
+// PERBAIKAN: Hapus pesan lokal yang sudah tidak ada di server (misal sudah dihapus admin)
 function mergeData(localArr, serverArr, key = 'id') {
   const map = new Map();
   if (Array.isArray(serverArr)) {
@@ -375,7 +377,10 @@ function mergeData(localArr, serverArr, key = 'id') {
       if (item && item[key] !== undefined && item[key] !== null) {
         const idStr = String(item[key]);
         if (!map.has(idStr)) {
-          map.set(idStr, item);
+          // Hanya simpan pesan lokal jika umurnya kurang dari 15 detik (belum tersinkron)
+          if (item.timestamp && (Date.now() - parseInt(item.timestamp) < 15000)) {
+             map.set(idStr, item);
+          }
         }
       }
     });
@@ -583,8 +588,13 @@ function showDashboard(user) {
     document.getElementById('dashboardView').classList.remove('hidden');
     isDashboardActive = true;
     
+    // PERBAIKAN NOTIFIKASI: Meminta izin notifikasi browser
     if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          showToast('Notifikasi aktif! Anda akan mendapat pemberitahuan pesan baru.', 'success');
+        }
+      });
     }
     
     updateDashboardUI(user);
@@ -811,7 +821,6 @@ function updateChatHeader() {
   `;
 }
 
-// PERBAIKAN UTAMA: Hapus pesan akan ter-broadcast ke semua user
 async function fetchMessages() {
   let changed = false;
   try {
@@ -819,24 +828,24 @@ async function fetchMessages() {
     const data = await res.json();
     const actualData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
     if (actualData.length > 0) {
-      // Cek apakah ada instruksi hapus dari server
-      let newDeletes = false;
-      actualData.forEach(m => {
-        if (m.type === 'delete' && !deletedMsgIds.has(m.content)) {
-          deletedMsgIds.add(m.content);
-          newDeletes = true;
+      const validServerMsgs = actualData.filter(m => {
+        // PERBAIKAN UTAMA: Cek instruksi hapus dari reaksi 'deleted'
+        if (m.reactions && m.reactions.deleted) {
+          if (!deletedMsgIds.has(m.id)) {
+            deletedMsgIds.add(m.id);
+            localStorage.setItem('nc_deleted_msgs', JSON.stringify([...deletedMsgIds]));
+            changed = true;
+          }
+          return false;
         }
+        return !deletedMsgIds.has(m.id);
       });
-      if (newDeletes) {
-        localStorage.setItem('nc_deleted_msgs', JSON.stringify([...deletedMsgIds]));
-      }
       
-      const validServerMsgs = actualData.filter(m => !deletedMsgIds.has(m.id) && m.type !== 'delete');
       const serverIds = new Set(validServerMsgs.map(m => m.id));
       const localOnly = messagesCache.filter(m => !serverIds.has(m.id) && !deletedMsgIds.has(m.id) && (Date.now() - parseInt(m.timestamp) < 15000));
       const newCache = [...validServerMsgs, ...localOnly];
       
-      if (newCache.length !== messagesCache.length || JSON.stringify(newCache) !== JSON.stringify(messagesCache) || newDeletes) {
+      if (newCache.length !== messagesCache.length || JSON.stringify(newCache) !== JSON.stringify(messagesCache) || changed) {
         messagesCache = newCache;
         localStorage.setItem('nc_messages', JSON.stringify(messagesCache));
         changed = true;
@@ -845,7 +854,7 @@ async function fetchMessages() {
   } catch(e) {
     let mArr = safeParse(localStorage.getItem('nc_messages'), []);
     if (!Array.isArray(mArr)) mArr = [];
-    const localOnly = mArr.filter(m => !deletedMsgIds.has(m.id) && m.type !== 'delete');
+    const localOnly = mArr.filter(m => !deletedMsgIds.has(m.id));
     if (localOnly.length !== messagesCache.length) {
       messagesCache = localOnly;
       changed = true;
@@ -891,12 +900,13 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
       let reactionsHtml = '<div class="flex gap-1 items-center flex-wrap mt-1">';
       if (msg.reactions && Object.keys(msg.reactions).length > 0) {
         for (const [emoji, uids] of Object.entries(msg.reactions)) {
+          if (emoji === 'deleted') continue; // Skip instruksi hapus
           const isActive = uids.includes(parseInt(user.id));
           const reactedNames = uids.map(uid => {
             const u = usersCache.find(x => String(x.id) === String(uid));
             return u ? u.name : 'Unknown';
           }).join(', ');
-          reactionsHtml += `<div class="reaction-pill ${isActive ? 'active' : ''}" title="Dikasih emot oleh: ${reactedNames}" onclick="toggleReaction('${msg.id}', '${emoji}', null)">${emoji} <span>${uids.length}</span></div>`;
+          reactionsHtml += `<div class="reaction-pill ${isActive ? 'active' : ''}" data-tip="Dikasih emot oleh: ${escapeHtml(reactedNames)}" onclick="toggleReaction('${msg.id}', '${emoji}', null)">${emoji} <span>${uids.length}</span></div>`;
         }
       }
       reactionsHtml += '</div>';
@@ -1055,7 +1065,6 @@ function insertMention(name) {
   }
 }
 
-// PERBAIKAN EMOT: Jika klik luar / mouse geser, auto hide
 document.addEventListener('click', (e) => {
   if (!mentionDropdown.contains(e.target) && e.target !== messageInput) {
     mentionDropdown.classList.add('hidden');
@@ -1091,33 +1100,17 @@ function toggleReactionPicker(btn) {
   if (isHidden) picker.classList.remove('hidden');
 }
 
-// PERBAIKAN UTAMA: Kirim instruksi hapus ke server agar semua user terupdate
+// PERBAIKAN UTAMA: Hapus pesan untuk semua user tanpa teks "System"
 async function deleteMessage(msgId) {
   if (!confirm('Hapus pesan ini?')) return;
   deletedMsgIds.add(msgId);
   localStorage.setItem('nc_deleted_msgs', JSON.stringify([...deletedMsgIds]));
-  
-  // Hapus dari layar lokal
   messagesCache = messagesCache.filter(m => m.id !== msgId);
   lastMessagesHtml = '';
   renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : '');
   
-  // Broadcast penghapusan ke server dengan tipe 'delete' agar semua user tau
-  const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
-  if (user && activeGroupId) {
-    const delMsg = { 
-      id: 'm_del_' + Date.now() + Math.random().toString(36).substr(2, 5), 
-      groupId: activeGroupId, 
-      userId: user.id, 
-      name: 'System', 
-      avatar: '', 
-      content: msgId, // ID pesan yang mau dihapus
-      timestamp: Date.now(), 
-      type: 'delete', 
-      reactions: {} 
-    };
-    apiPost({ action: 'saveMessage', ...delMsg });
-  }
+  // Kirim instruksi hapus ke server lewat field reactions
+  apiPost({ action: 'updateReactions', id: msgId, reactions: { deleted: true } });
   
   showToast('Pesan dihapus permanen', 'success');
 }
@@ -1127,6 +1120,8 @@ async function toggleReaction(msgId, emoji, pickerEl) {
   const msg = messagesCache.find(m => m.id == msgId);
   if (!msg) return;
   if (!msg.reactions) msg.reactions = {};
+  if (msg.reactions.deleted) delete msg.reactions.deleted; // Jangan sampai tertimpa
+  
   if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
   
   const uid = parseInt(localStorage.getItem('nc_session'));
@@ -1274,16 +1269,30 @@ function startNotifCheck() {
     let latestMsg = null, latestGroupId = null;
     const isTabHidden = document.hidden;
     
+    let totalUnread = 0;
+    
     groupsCache.forEach(g => {
+      const unread = getUnreadCount(g.id, user.id);
+      totalUnread += unread;
+      
+      // Jangan notif kalau dia lagi ada di group itu DAN tab sedang aktif dilihat
       if (!isTabHidden && g.id === activeGroupId) return; 
+      
       const msgs = messagesCache.filter(m => m.groupId === g.id && !deletedMsgIds.has(m.id));
       const lastRead = lastReadCache[`${user.id}_${g.id}`] || 0;
       const newMsgs = msgs.filter(m => parseInt(m.timestamp) > lastRead && String(m.userId) !== String(user.id));
+      
       if (newMsgs.length > 0) {
         const lastMsg = newMsgs[newMsgs.length - 1];
-        if (!latestMsg || parseInt(lastMsg.timestamp) > parseInt(latestMsg.timestamp)) { latestMsg = lastMsg; latestGroupId = g.id; }
+        if (!latestMsg || parseInt(lastMsg.timestamp) > parseInt(latestMsg.timestamp)) { 
+          latestMsg = lastMsg; 
+          latestGroupId = g.id; 
+        }
       }
     });
+    
+    // PERBAIKAN NOTIFIKASI: Update title tab browser
+    document.title = totalUnread > 0 ? `(${totalUnread}) Danatoto Chat` : 'Danatoto Chat';
     
     const notifBar = document.getElementById('notifBar');
     if (latestMsg) {
@@ -1317,6 +1326,7 @@ function startNotifCheck() {
         notifBar.classList.remove('hidden');
         notifBar.dataset.targetGroup = latestGroupId;
 
+        // PERBAIKAN NOTIFIKASI: Selalu kirim notif browser kalau ada pesan baru, walau di tab lain
         if (isNewMsg) {
           playBeep();
           if ('Notification' in window && Notification.permission === 'granted') {
