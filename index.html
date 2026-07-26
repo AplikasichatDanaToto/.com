@@ -218,7 +218,7 @@
             <div id="mentionDropdown" class="hidden mention-dropdown"></div>
             <button type="button" id="pickerBtn" class="w-11 h-11 rounded-xl bg-[#18181b] hover:bg-[#27272a] text-gray-500 hover:text-green-400 flex items-center justify-center flex-shrink-0 transition-all" disabled><i class="fas fa-smile"></i></button>
             <button type="button" id="uploadImgBtn" class="w-11 h-11 rounded-xl bg-[#18181b] hover:bg-[#27272a] text-gray-500 hover:text-green-400 flex items-center justify-center flex-shrink-0 transition-all" disabled><i class="fas fa-image"></i></button>
-            <input type="text" id="messageInput" class="input-style flex-1 px-4 py-3 rounded-xl text-sm" placeholder="Ketik pesan... (Gunakan @ untuk mention)" disabled>
+            <input type="text" id="messageInput" class="input-style flex-1 px-4 py-3 rounded-xl text-sm" placeholder="Ketik pesan..." disabled>
             <button type="submit" id="sendBtn" class="btn-primary w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" disabled><i class="fas fa-paper-plane"></i></button>
           </form>
         </div>
@@ -344,12 +344,7 @@
   <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
 
 <script>
-// =======================================================
-// PASTE LINK GAMBAR BACKGROUND LUAR DI BAWAH INI:
-// =======================================================
-const LOGIN_BG_URL = ''; // Contoh: 'https://wallpapercave.com/wp/wp12345.jpg'
-// =======================================================
-
+const LOGIN_BG_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycby3TVAZ_350S6dfV7ZFjO9uSmNYquHNVi-H4YZ0qgYlBqobpU8yKeb2etZMKGuKm406/exec';
 
 if (LOGIN_BG_URL) {
@@ -363,7 +358,6 @@ fetch('https://api.ipify.org?format=json')
   .then(data => { currentIP = data.ip; document.getElementById('ipDisplay').textContent = currentIP; })
   .catch(() => { currentIP = 'Unknown'; document.getElementById('ipDisplay').textContent = 'Gagal deteksi'; });
 
-// [FIX F5 CRASH] Fungsi pengaman agar JSON.parse tidak pernah crash walau data korup
 function safeParse(str, fallback) {
   try { 
     const parsed = JSON.parse(str);
@@ -371,7 +365,6 @@ function safeParse(str, fallback) {
   } catch(e) { return fallback; }
 }
 
-// [FIX DATA DOUBLE & HILANG] Fungsi MERGE data menggunakan Map (Menjamin 0 Duplikat)
 function mergeData(localArr, serverArr, key = 'id') {
   const map = new Map();
   if (Array.isArray(serverArr)) {
@@ -394,7 +387,6 @@ function mergeData(localArr, serverArr, key = 'id') {
   return Array.from(map.values());
 }
 
-// Fungsi untuk memastikan array benar-benar bersih dari duplikat sebelum render
 function uniqueById(arr) {
   const seen = new Set();
   return arr.filter(item => {
@@ -449,7 +441,6 @@ async function apiPost(payload) {
   }
 }
 
-// [FIX ROBUST API] Fetch users dari server, tangkap format array atau {data: array}
 async function fetchUsers() {
   try {
     const res = await fetch(`${API_URL}?action=getUsers`);
@@ -466,7 +457,6 @@ async function fetchUsers() {
   }
 }
 
-// [FIX ROBUST API] Fetch groups dari server, tangkap format array atau {data: array}
 async function fetchGroups() {
   try {
     const res = await fetch(`${API_URL}?action=getGroups`);
@@ -564,9 +554,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   showDashboard(user);
 });
 
-// [FIX UTAMA LOADING] showDashboard mendeteksi apakah ada local cache. 
-// Jika ada -> INSTAN. Jika tidak (incognito) -> Tunggu server.
-async function showDashboard(user) {
+function showDashboard(user) {
   if (!user) {
     localStorage.removeItem('nc_session');
     document.getElementById('loginView').classList.remove('hidden');
@@ -584,23 +572,8 @@ async function showDashboard(user) {
       Notification.requestPermission();
     }
     
-    const hasLocalData = groupsCache.length > 0;
-    
-    if (hasLocalData) {
-      // 1. Langsung render UI dari cache lokal (INSTAN, 0.1 detik)
-      updateDashboardUI(user);
-      syncServerData();
-    } else {
-      // 2. INCOGNITO / FIRST LOAD: Tampilkan loading, tunggu server selesai
-      document.getElementById('userName').textContent = user.name;
-      document.getElementById('userRole').textContent = user.role.toUpperCase() + ' • Online';
-      document.getElementById('userAvatarHeader').src = user.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${user.name}`;
-      
-      document.getElementById('groupList').innerHTML = `<div class="text-center text-gray-500 text-xs p-4"><i class="fas fa-spinner fa-spin"></i> Memuat data dari server...</div>`;
-      document.getElementById('messagesContainer').innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-700"><i class="fas fa-spinner fa-spin text-4xl mb-4"></i><p class="text-sm font-medium">Memuat pesan...</p></div>`;
-      
-      await syncServerData(user);
-    }
+    updateDashboardUI(user);
+    syncServerData(user);
   } else {
     updateDashboardUI(user);
   }
@@ -698,12 +671,17 @@ function getGroupMemberCount(gid) {
   return usersCache.filter(u => u.role === 'admin' || (u.groupAccess && u.groupAccess.includes(gid))).length;
 }
 
+function getLastMessage(gid) {
+  const msgs = messagesCache.filter(m => m.groupId === gid && !deletedMsgIds.has(m.id));
+  if (msgs.length === 0) return null;
+  return msgs[msgs.length - 1];
+}
+
 function renderGroups() {
   const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
   if (!user) return;
   const list = document.getElementById('groupList');
   
-  // [FIX ANTI DOUBLE] Bersihkan groupsCache dari duplikat sebelum di proses
   const cleanGroups = uniqueById(groupsCache);
   if (cleanGroups.length !== groupsCache.length) {
     groupsCache = cleanGroups;
@@ -728,18 +706,29 @@ function renderGroups() {
     const isLeader = user.id === g.leaderId || user.role === 'admin';
     const isPinned = user.pinnedGroups && user.pinnedGroups.includes(g.id);
     const logo = g.logo || `https://ui-avatars.com/api/?background=18181b&color=fff&name=${g.name.substring(0,2)}`;
-    const memberCount = getGroupMemberCount(g.id);
+    
+    const lastMsg = getLastMessage(g.id);
+    let lastMsgHtml = 'Belum ada pesan';
+    if (lastMsg) {
+      const isImg = lastMsg.type === 'image' || lastMsg.type === 'gif';
+      const msgText = isImg ? '🖼️ Foto/GIF' : lastMsg.content.replace(/^\[RPL:([^:]+):([^\]]+)\]/, '').trim();
+      lastMsgHtml = `<span class="text-green-400 font-medium">${lastMsg.name.split(' ')[0]}:</span> ${escapeHtml(msgText.substring(0, 20))}${msgText.length > 20 ? '...' : ''}`;
+    }
+
     return `
       <div class="group-item ${activeGroupId === g.id ? 'active' : ''} px-3 py-3 cursor-pointer flex items-center gap-3" onclick="selectGroup('${g.id}')">
-        <img src="${logo}" class="w-10 h-10 rounded-xl object-cover flex-shrink-0">
+        <img src="${logo}" class="w-12 h-12 rounded-xl object-cover flex-shrink-0">
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between">
-            <span class="text-sm font-semibold text-gray-200 break-words whitespace-normal">${g.name}</span>
+            <span class="text-sm font-bold text-white break-words whitespace-normal truncate">${g.name}</span>
+            <span class="text-[10px] text-gray-500 flex-shrink-0 ml-2">${lastMsg ? formatTime(lastMsg.timestamp) : ''}</span>
+          </div>
+          <div class="flex items-center justify-between mt-1">
+            <span class="text-[11px] text-gray-500 truncate">${lastMsgHtml}</span>
             ${unread > 0 ? `<span class="bg-green-500 text-black font-bold text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 ml-2 flex-shrink-0">${unread}</span>` : ''}
           </div>
-          <span class="text-[10px] text-gray-600">${memberCount} anggota</span>
         </div>
-        <div class="flex items-center gap-1 flex-shrink-0 z-10 relative">
+        <div class="flex flex-col gap-1 flex-shrink-0 z-10 relative">
           <button class="action-btn w-7 h-7 flex items-center justify-center text-gray-700 hover:text-white" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan">
             <i class="fas fa-thumbtack text-xs ${isPinned ? 'text-green-400' : ''}"></i>
           </button>
@@ -820,6 +809,7 @@ async function fetchMessages() {
     messagesCache = mArr.filter(m => !deletedMsgIds.has(m.id));
   }
   if (activeGroupId) renderMessages();
+  renderGroups();
 }
 
 function renderMessages(searchTerm = '', isInitialLoad = false) {
@@ -930,7 +920,6 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
   }
 }
 
-// [FITUR MENTION @] ------------------------------------------------
 const messageInput = document.getElementById('messageInput');
 const mentionDropdown = document.getElementById('mentionDropdown');
 
@@ -945,7 +934,6 @@ messageInput.addEventListener('input', () => {
     const user = usersCache.find(u => u.id == localStorage.getItem('nc_session'));
     if (!user) return;
 
-    // Cari anggota yang ada di group ini
     const groupMembers = usersCache.filter(u => 
       u.role === 'admin' || (u.groupAccess && u.groupAccess.includes(activeGroupId))
     );
@@ -956,7 +944,6 @@ messageInput.addEventListener('input', () => {
 
     let html = '';
     
-    // Opsi All
     if ('all'.includes(query) || query === '') {
       html += `
         <div class="mention-item" onclick="insertMention('all')">
@@ -971,9 +958,8 @@ messageInput.addEventListener('input', () => {
       `;
     }
 
-    // Daftar Anggota
     filteredMembers.forEach(m => {
-      if (m.id === user.id) return; // Skip diri sendiri
+      if (m.id === user.id) return;
       const mAvatar = m.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${m.name}`;
       html += `
         <div class="mention-item" onclick="insertMention('${m.username.replace(/'/g, "\\'")}')">
@@ -1009,20 +995,17 @@ function insertMention(name) {
     messageInput.value = newText;
     mentionDropdown.classList.add('hidden');
     
-    // Set caret ke akhir mention
-    const newCaretPos = match.index + name.length + 2; // +2 untuk @ dan spasi
+    const newCaretPos = match.index + name.length + 2;
     messageInput.focus();
     messageInput.setSelectionRange(newCaretPos, newCaretPos);
   }
 }
 
-// Tutup dropdown jika klik di luar
 document.addEventListener('click', (e) => {
   if (!mentionDropdown.contains(e.target) && e.target !== messageInput) {
     mentionDropdown.classList.add('hidden');
   }
 });
-// ----------------------------------------------------------------
 
 function replyMessage(msgId) {
   const msg = messagesCache.find(m => m.id === msgId);
@@ -1090,7 +1073,7 @@ document.getElementById('messageForm').addEventListener('submit', async (e) => {
   
   messagesCache.push(msg);
   input.value = '';
-  mentionDropdown.classList.add('hidden'); // sembunyikan mention saat kirim
+  mentionDropdown.classList.add('hidden');
   renderMessages();
   renderGroups();
   apiPost({ action: 'saveMessage', ...msg });
@@ -1400,7 +1383,6 @@ document.getElementById('editGroupLogoInput').addEventListener('change', (e) => 
   });
 });
 
-// [FIX DAFTAR ANGGOTA RAPI] Tampilan list anggota di gerigi
 function renderGroupMembersChecklist(groupId) {
   const g = groupsCache.find(x => x.id === groupId);
   if (!g) return;
