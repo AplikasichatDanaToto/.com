@@ -54,7 +54,6 @@
 
   .msg-group { position: relative; }
   
-  /* PERAPIAN TOMBOL ACTION (HAPUS, BALAS, EMOT) */
   .msg-actions { display: flex; flex-direction: column; gap: 4px; opacity: 0.3; transition: opacity 0.2s; align-self: center; }
   .msg-group:hover .msg-actions { opacity: 1; }
   
@@ -64,7 +63,7 @@
     font-size: 13px; cursor: pointer; transition: all 0.2s; 
   }
   .msg-action-btn:hover { color: #fff; border-color: #22c55e; background: #27272a; box-shadow: 0 0 8px rgba(34,197,94,0.3); }
-  .msg-action-btn.danger { color: #ef4444; border-color: rgba(239,68,68,0.3); opacity: 1 !important; } /* Tombol hapus selalu terang */
+  .msg-action-btn.danger { color: #ef4444; border-color: rgba(239,68,68,0.3); opacity: 1 !important; }
   .msg-action-btn.danger:hover { background: #ef4444; color: #fff; border-color: #ef4444; box-shadow: 0 0 12px rgba(239,68,68,0.5); }
   
   .reaction-picker { 
@@ -113,12 +112,6 @@
   }
   .mention-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
   .mention-item:hover { background: #27272a; }
-
-  /* Avatar Stack di Sidebar Group */
-  .avatar-stack { display: flex; align-items: center; }
-  .avatar-stack img { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #141417; object-fit: cover; margin-left: -6px; }
-  .avatar-stack img:first-child { margin-left: 0; }
-  .avatar-stack .more-count { font-size: 9px; background: #27272a; color: #fff; padding: 2px 4px; border-radius: 10px; margin-left: -6px; border: 1px solid #141417; }
 </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -310,7 +303,6 @@
     </div>
   </div>
 
-  <!-- MODAL KATEGORI ANGGOTA YANG CANTIK -->
   <div id="manageGroupModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
     <div class="glass rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col neon-border">
       <div class="p-5 border-b border-[#27272a] flex items-center justify-between">
@@ -332,7 +324,6 @@
           <button onclick="toggleAddMemberList()" class="btn-primary px-3 py-1.5 rounded-lg text-xs flex items-center gap-1"><i class="fas fa-plus"></i> Tambah Anggota</button>
         </div>
         
-        <!-- Toggle untuk cari user yang belum masuk -->
         <div id="addMemberListContainer" class="hidden mb-3 p-2 bg-[#18181b] rounded-lg border border-[#27272a] max-h-40 overflow-y-auto space-y-1"></div>
         
         <div id="groupMembersList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
@@ -739,40 +730,24 @@ function renderGroups(forceRender = false) {
       lastMsgHtml = `<span class="text-green-400 font-medium">${lastMsg.name.split(' ')[0]}:</span> ${escapeHtml(msgText.substring(0, 20))}${msgText.length > 20 ? '...' : ''}`;
     }
 
-    // Render Avatar Anggota bertumpuk
-    const membersInGroup = usersCache.filter(u => u.role === 'admin' || (u.groupAccess && u.groupAccess.includes(g.id)));
-    let membersHtml = '';
-    if (membersInGroup.length > 0) {
-      membersHtml = '<div class="avatar-stack mt-1.5">';
-      membersInGroup.slice(0, 3).forEach(m => {
-        const mAvatar = m.avatar || `https://ui-avatars.com/api/?background=27272a&color=fff&name=${m.name.substring(0,1)}`;
-        membersHtml += `<img src="${mAvatar}" title="${m.name}">`;
-      });
-      if (membersInGroup.length > 3) {
-        membersHtml += `<div class="more-count">+${membersInGroup.length - 3}</div>`;
-      }
-      membersHtml += '</div>';
-    }
-
     return `
       <div class="group-item ${activeGroupId === g.id ? 'active' : ''} px-3 py-3 cursor-pointer flex items-center gap-3" onclick="selectGroup('${g.id}')">
         <img src="${logo}" class="w-12 h-12 rounded-xl object-cover flex-shrink-0">
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between">
-            <span class="text-sm font-bold text-white break-words whitespace-normal truncate">${g.name}</span>
+            <span class="text-sm font-bold text-white truncate">${g.name}</span>
             <span class="text-[10px] text-gray-500 flex-shrink-0 ml-2">${lastMsg ? formatTime(lastMsg.timestamp) : ''}</span>
           </div>
           <div class="flex items-center justify-between mt-1">
             <span class="text-[11px] text-gray-500 truncate">${lastMsgHtml}</span>
             ${unread > 0 ? `<span class="bg-green-500 text-black font-bold text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 ml-2 flex-shrink-0">${unread}</span>` : ''}
           </div>
-          ${membersHtml}
         </div>
         <div class="flex flex-col gap-2 flex-shrink-0 z-10 relative">
-          <button class="action-btn w-7 h-7 flex items-center justify-center text-gray-700 hover:text-white" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan">
+          <button class="w-7 h-7 flex items-center justify-center text-gray-700 hover:text-white" onclick="event.stopPropagation(); togglePinGroup('${g.id}')" title="Sematkan">
             <i class="fas fa-thumbtack text-xs ${isPinned ? 'text-green-400' : ''}"></i>
           </button>
-          ${isLeader ? `<button class="action-btn w-7 h-7 flex items-center justify-center text-gray-700 hover:text-white" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')" title="Kelola"><i class="fas fa-cog text-xs"></i></button>` : ''}
+          ${isLeader ? `<button class="w-7 h-7 flex items-center justify-center text-gray-700 hover:text-white" onclick="event.stopPropagation(); openManageGroupModal('${g.id}')" title="Kelola"><i class="fas fa-cog text-xs"></i></button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -928,7 +903,6 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
       const isFreshMsg = !isInitialLoad && !searchTerm && (Date.now() - parseInt(msg.timestamp) < 5000);
       const msgAnimClass = isFreshMsg ? 'msg-in' : '';
       
-      // Aksi Tombol Hapus (Cuma Simbol Terang)
       let actionsHtml = `<div class="msg-actions ${isSelf ? 'flex-row-reverse' : ''}">`;
       actionsHtml += `<button class="msg-action-btn" onclick="replyMessage('${msg.id}')" title="Balas"><i class="fas fa-reply"></i></button>`;
       actionsHtml += `<div class="relative">
@@ -1065,9 +1039,16 @@ function insertMention(name) {
   }
 }
 
+// PERBAIKAN: Jika mouse digeser / klik di luar tombol emot, pop-up emot otomatis hilang
 document.addEventListener('click', (e) => {
   if (!mentionDropdown.contains(e.target) && e.target !== messageInput) {
     mentionDropdown.classList.add('hidden');
+  }
+  
+  const isEmojiBtn = e.target.closest('[title="Kasih Emot"]');
+  const isReactionPicker = e.target.closest('.reaction-picker');
+  if (!isEmojiBtn && !isReactionPicker) {
+    document.querySelectorAll('.reaction-picker').forEach(p => p.classList.add('hidden'));
   }
 });
 
