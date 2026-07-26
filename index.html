@@ -826,19 +826,14 @@ async function fetchMessages() {
     const actualData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
     if (actualData.length > 0) {
       const validServerMsgs = actualData.filter(m => {
-        // 1. Buang pesan System sampah dari percobaan sebelumnya
-        if (m.name === 'System' || m.type === 'delete') {
-          return false;
-        }
+        if (m.name === 'System' || m.type === 'delete') return false;
         
-        // 2. Parse reactions dengan AMAN (server sering kirim string)
         let reactions = m.reactions;
         if (typeof reactions === 'string') {
           try { reactions = JSON.parse(reactions); } catch(e) { reactions = {}; }
         }
         if (!reactions || typeof reactions !== 'object') reactions = {};
         
-        // 3. Cek instruksi hapus dari reactions
         if (reactions.deleted === true || reactions.deleted === "true") {
           if (!deletedMsgIds.has(m.id)) {
             deletedMsgIds.add(m.id);
@@ -848,10 +843,8 @@ async function fetchMessages() {
           return false;
         }
         
-        // 4. Jika pesan sudah dihapus lokal, abaikan
         if (deletedMsgIds.has(m.id)) return false;
         
-        // 5. Update reactions secara aman
         m.reactions = reactions;
         return true;
       });
@@ -915,8 +908,8 @@ function renderMessages(searchTerm = '', isInitialLoad = false) {
       let reactionsHtml = '<div class="flex gap-1 items-center flex-wrap mt-1">';
       if (msg.reactions && typeof msg.reactions === 'object' && Object.keys(msg.reactions).length > 0) {
         for (const [emoji, uids] of Object.entries(msg.reactions)) {
-          if (emoji === 'deleted') continue; // Skip instruksi hapus
-          if (!Array.isArray(uids)) continue; // Safety check
+          if (emoji === 'deleted') continue; 
+          if (!Array.isArray(uids)) continue; 
           
           const isActive = uids.includes(parseInt(user.id));
           const reactedNames = uids.map(uid => {
@@ -1120,15 +1113,12 @@ function toggleReactionPicker(btn) {
 async function deleteMessage(msgId) {
   if (!confirm('Hapus pesan ini?')) return;
   
-  // 1. Hapus lokal
   deletedMsgIds.add(msgId);
   localStorage.setItem('nc_deleted_msgs', JSON.stringify([...deletedMsgIds]));
   messagesCache = messagesCache.filter(m => m.id !== msgId);
   lastMessagesHtml = '';
   renderMessages(isSearchMode ? document.getElementById('globalSearch').value.trim() : '');
   
-  // 2. Kirim instruksi hapus ke server lewat field reactions
-  // Ini memastikan semua user akan menghapus pesan ini saat mereka polling
   apiPost({ action: 'updateReactions', id: msgId, reactions: { deleted: true } });
   
   showToast('Pesan dihapus permanen', 'success');
@@ -1140,11 +1130,10 @@ async function toggleReaction(msgId, emoji, pickerEl) {
   const msg = messagesCache.find(m => m.id == msgId);
   if (!msg) return;
   
-  // Pastikan reactions adalah object
   if (!msg.reactions || typeof msg.reactions !== 'object') {
     msg.reactions = {};
   }
-  if (msg.reactions.deleted) delete msg.reactions.deleted; // Jangan timpa flag deleted
+  if (msg.reactions.deleted) delete msg.reactions.deleted; 
   
   if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
   
@@ -1280,7 +1269,6 @@ let pollingInterval = null;
 let pollCount = 0;
 function startNotifCheck() {
   if (pollingInterval) clearInterval(pollingInterval);
-  let prevMsgCount = messagesCache.length;
   
   pollingInterval = setInterval(async () => {
     pollCount++;
@@ -1295,15 +1283,11 @@ function startNotifCheck() {
     if(!user) return;
     
     let latestMsg = null, latestGroupId = null;
-    const isTabHidden = document.hidden;
-    
     let totalUnread = 0;
     
     groupsCache.forEach(g => {
       const unread = getUnreadCount(g.id, user.id);
       totalUnread += unread;
-      
-      if (!isTabHidden && g.id === activeGroupId) return; 
       
       const msgs = messagesCache.filter(m => m.groupId === g.id && !deletedMsgIds.has(m.id));
       const lastRead = lastReadCache[`${user.id}_${g.id}`] || 0;
@@ -1322,10 +1306,10 @@ function startNotifCheck() {
     
     const notifBar = document.getElementById('notifBar');
     if (latestMsg) {
-      if (latestMsg.id !== lastNotifiedMsgId || notifBar.classList.contains('hidden')) {
-        const isNewMsg = latestMsg.id !== lastNotifiedMsgId;
+      const isNewMsg = latestMsg.id !== lastNotifiedMsgId;
+      
+      if (isNewMsg) {
         lastNotifiedMsgId = latestMsg.id;
-        
         const group = groupsCache.find(g => g.id === latestGroupId);
         
         let isTagged = false;
@@ -1352,27 +1336,29 @@ function startNotifCheck() {
         notifBar.classList.remove('hidden');
         notifBar.dataset.targetGroup = latestGroupId;
 
-        if (isNewMsg) {
-          playBeep();
-          if ('Notification' in window && Notification.permission === 'granted') {
-            try {
-              new Notification(notifTitle, { 
-                body: notifText,
-                icon: latestMsg.avatar || 'https://lh3.googleusercontent.com/d/1JxvqFXKhF56O6ww8YTn-8iV3byNHvyu2'
-              });
-            } catch(e) {}
-          }
+        playBeep();
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification(notifTitle, { 
+              body: notifText,
+              icon: latestMsg.avatar || 'https://lh3.googleusercontent.com/d/1JxvqFXKhF56O6ww8YTn-8iV3byNHvyu2'
+            });
+          } catch(e) {}
+        }
+      } else {
+        if (!notifBar.classList.contains('hidden')) {
+          // Notif sudah muncul, biarkan tetap di sana
+        } else if (totalUnread > 0) {
+          notifBar.classList.remove('hidden');
         }
       }
     } else {
       notifBar.classList.add('hidden');
+      lastNotifiedMsgId = null;
     }
     
-    if (messagesCache.length !== prevMsgCount) {
-      prevMsgCount = messagesCache.length;
-      renderGroups(true);
-    }
-  }, 1500); // Dipercepat menjadi 1.5 detik agar pesan masuk lebih instan
+    renderGroups(true);
+  }, 1500); 
 }
 
 function handleNotifClick() {
@@ -1644,7 +1630,6 @@ async function initializeApp() {
 
   let mArr = safeParse(localStorage.getItem('nc_messages'), []);
   if (!Array.isArray(mArr)) mArr = [];
-  // Bersihkan cache lokal dari pesan sistem sampah
   messagesCache = mArr.filter(m => m.name !== 'System' && m.type !== 'delete');
 
   ensureAdminExists();
